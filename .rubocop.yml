@@ -1,0 +1,79 @@
+plugins:
+  - rubocop-performance
+
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'bin/*'
+    - 'node_modules/**/*'
+    - 'vendor/**/*'
+    - 'backup/**/*'
+    - 'coverage/**/*'
+    - '.git/**/*'
+
+# Style
+Style/Documentation:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+# Naming
+Naming/MethodParameterName:
+  AllowedNames:
+    - e   # Standard exception parameter name
+    - id  # Standard identifier parameter name
+
+# Layout
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'spec/**/*'
+
+# Metrics
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+    - 'lib/code_sandbox_mcp/server.rb'
+    - 'lib/code_sandbox_mcp/executor.rb'
+
+Metrics/ClassLength:
+  Max: 150
+  Exclude:
+    - 'lib/code_sandbox_mcp/server.rb'
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+
+Metrics/ModuleLength:
+  Max: 150
+
+Metrics/AbcSize:
+  Exclude:
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+    - 'lib/code_sandbox_mcp/server.rb'
+    - 'lib/code_sandbox_mcp/executor.rb'
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+    - 'lib/code_sandbox_mcp/server.rb'
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - 'lib/code_sandbox_mcp/streaming_executor.rb'
+    - 'lib/code_sandbox_mcp/server.rb'
+
+# Performance
+Performance/RegexpMatch:
+  Enabled: true

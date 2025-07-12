@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "python",
+      "code": "print('Hello from Code Sandbox MCP!')\nprint('This is a simple demonstration.')\nresult = sum(range(1, 11))\nprint(f'Sum of 1-10: {result}')"
+    }
+  }
+}

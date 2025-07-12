@@ -1,0 +1,110 @@
+{
+  "description": "Examples of code execution in all supported languages",
+  "examples": [
+    {
+      "language": "python",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "python",
+            "code": "print(\"Hello from Python!\")\nprint(f\"2 + 2 = {2 + 2}\")"
+          }
+        }
+      }
+    },
+    {
+      "language": "javascript",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "javascript",
+            "code": "console.log(\"Hello from JavaScript!\");\nconsole.log(`2 + 2 = ${2 + 2}`);"
+          }
+        }
+      }
+    },
+    {
+      "language": "typescript",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "typescript",
+            "code": "function greet(name: string): string {\n  return `Hello from TypeScript, ${name}!`;\n}\n\nconsole.log(greet(\"World\"));\nconsole.log(`2 + 2 = ${2 + 2}`);"
+          }
+        }
+      }
+    },
+    {
+      "language": "ruby",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "ruby",
+            "code": "puts \"Hello from Ruby!\"\nputs \"2 + 2 = #{2 + 2}\""
+          }
+        }
+      }
+    },
+    {
+      "language": "bash",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "bash",
+            "code": "echo \"Hello from Bash!\"\necho \"2 + 2 = $((2 + 2))\""
+          }
+        }
+      }
+    },
+    {
+      "language": "zsh",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "zsh",
+            "code": "echo \"Hello from Zsh!\"\necho \"Array example: ${(@)array}\"\narray=(apple banana cherry)\necho \"Fruits: ${array[*]}\""
+          }
+        }
+      }
+    },
+    {
+      "language": "fish",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "fish",
+            "code": "echo \"Hello from Fish!\"\nset fruits apple banana cherry\necho \"Fruits: $fruits\"\necho \"Count: \"(count $fruits)"
+          }
+        }
+      }
+    }
+  ]
+}

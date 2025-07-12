@@ -1,0 +1,110 @@
+{
+  "description": "Complete MCP protocol flow example",
+  "steps": [
+    {
+      "step": 1,
+      "description": "Initialize connection",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {}
+      },
+      "expected_response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2024-11-05",
+          "serverInfo": {
+            "name": "code-sandbox-mcp",
+            "version": "0.1.0"
+          },
+          "capabilities": {
+            "tools": {}
+          }
+        }
+      }
+    },
+    {
+      "step": 2,
+      "description": "List available tools",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+      },
+      "expected_response": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "result": {
+          "tools": [
+            {
+              "name": "execute_code",
+              "description": "Execute code in a secure Docker sandbox. Supports JavaScript, TypeScript, Python, Ruby, PHP, Perl, Lua, Bash, and Shell. Output is streamed in real-time as it becomes available.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "type": "string",
+                    "enum": ["bash", "javascript", "lua", "perl", "php", "python", "ruby", "sh", "typescript"],
+                    "description": "Programming language to execute"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "Code to execute"
+                  }
+                },
+                "required": ["language", "code"]
+              },
+              "annotations": {
+                "readOnlyHint": false,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false,
+                "supportsStreaming": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "step": 3,
+      "description": "Execute code",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "python",
+            "code": "print('Hello from MCP!')"
+          }
+        }
+      },
+      "expected_response": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Hello from MCP!\n"
+            },
+            {
+              "type": "text",
+              "text": "{\"exitCode\":0,\"executionTime\":\"XXms\",\"language\":\"python\",\"timestamp\":\"...\"}",
+              "mimeType": "application/json",
+              "annotations": {
+                "role": "metadata"
+              }
+            }
+          ],
+          "isError": false
+        }
+      }
+    }
+  ]
+}

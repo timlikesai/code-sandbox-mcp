@@ -1,0 +1,12 @@
+backup-typescript/
+coverage/
+spec/
+.git/
+.gitignore
+.rspec
+.rubocop.yml
+Rakefile
+*.md
+.DS_Store
+vendor/bundle/
+.bundle/

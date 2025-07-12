@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "python",
+      "code": "# Example showing error handling\nprint('Testing error handling in Code Sandbox MCP')\n\n# This will cause a runtime error\ntry:\n    result = 10 / 0\nexcept ZeroDivisionError as e:\n    print(f'Caught error: {e}')\n\n# This will cause an unhandled error\nprint('\\nNow causing an unhandled error...')\nundefined_variable"
+    }
+  }
+}

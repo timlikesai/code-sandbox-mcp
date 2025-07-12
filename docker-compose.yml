@@ -1,0 +1,35 @@
+services:
+  code-sandbox:
+    build:
+      context: .
+      target: production
+    image: code-sandbox:latest
+    stdin_open: true
+    tty: true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  code-sandbox-test:
+    build:
+      context: .
+      target: test
+    image: code-sandbox-test:latest
+    volumes:
+      - .:/app
+      - /app/vendor  # Keep gems in container
+    working_dir: /app
+    environment:
+      - COVERAGE=true
+    stdin_open: true
+    tty: true

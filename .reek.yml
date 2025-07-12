@@ -1,0 +1,48 @@
+# Reek configuration
+
+detectors:
+  # Allow longer methods for complex operations
+  TooManyStatements:
+    max_statements: 20
+    exclude:
+      - "CodeSandboxMcp::StreamingExecutor#execute_streaming"
+      - "CodeSandboxMcp::Server#handle_execute_code"
+  
+  # Allow more methods for protocol servers
+  TooManyMethods:
+    max_methods: 20
+  
+  
+  # Allow standard exception variable names
+  UncommunicativeVariableName:
+    accept:
+      - e  # Standard exception variable name
+  
+  # Allow standard exception parameter names
+  UncommunicativeParameterName:
+    accept:
+      - e  # Standard exception parameter name
+  
+  # Allow utility modules
+  UtilityFunction:
+    enabled: false
+  
+  # Allow some duplication in specs
+  DuplicateMethodCall:
+    exclude:
+      - "spec/**/*"
+  
+  # Allow longer parameter lists for initialization
+  LongParameterList:
+    max_params: 4
+  
+  # Configure instance variable assumptions
+  InstanceVariableAssumption:
+    exclude:
+      - "CodeSandboxMcp::StreamingExecutor"
+      - "CodeSandboxMcp::Server"
+
+exclude_paths:
+  - vendor
+  - spec
+  - test

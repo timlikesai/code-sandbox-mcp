@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-build:
+    name: Test and Build
+    runs-on: ubuntu-22.04  # Explicitly use Ubuntu 22.04 for stability
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Ruby for Rake
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.4.4'
+        bundler-cache: true
+
+    # Ensure Docker Compose v2 is available
+    - name: Verify Docker and Docker Compose
+      run: |
+        docker --version
+        docker compose version
+
+    # Step 1: Build test image (which builds production as base)
+    - name: Build test image
+      run: bundle exec rake docker:build_test
+
+    # Step 2: Run all tests using same Rake tasks as local development
+    - name: Run tests and quality checks
+      run: bundle exec rake docker:test
+
+    # Step 3: Test examples
+    - name: Test examples
+      run: |
+        docker compose run --rm code-sandbox-test /app/examples/test_examples_in_container.sh
+
+    # Step 4: Build production image (no-op since already built)
+    - name: Build production image
+      if: success()
+      run: bundle exec rake docker:build
+
+    # Step 5: Test production image works
+    - name: Smoke test production image
+      if: success()
+      run: |
+        RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | docker run --rm -i code-sandbox:latest 2>/dev/null)
+        echo "Response: $RESPONSE"
+        if echo "$RESPONSE" | grep -q "protocolVersion"; then
+          echo "✅ Production image smoke test passed"
+        else
+          echo "❌ Production image smoke test failed"
+          exit 1
+        fi
+
+    # Future: Push to registry
+    # - name: Log in to Docker Hub
+    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    #   uses: docker/login-action@v3
+    #   with:
+    #     username: ${{ secrets.DOCKER_USERNAME }}
+    #     password: ${{ secrets.DOCKER_TOKEN }}
+    
+    # - name: Push production image
+    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     target: production
+    #     tags: |
+    #       username/code-sandbox:latest
+    #       username/code-sandbox:${{ github.sha }}
+    #     push: true

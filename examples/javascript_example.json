@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "javascript",
+      "code": "// JavaScript example with async operations\nconsole.log('Starting JavaScript execution...');\n\n// Demonstrate async/await\nasync function fetchData() {\n    console.log('Simulating async operation...');\n    await new Promise(resolve => setTimeout(resolve, 1000));\n    return { status: 'success', data: [1, 2, 3, 4, 5] };\n}\n\n// Run async function\nfetchData().then(result => {\n    console.log('Result:', JSON.stringify(result, null, 2));\n    console.log('Sum of data:', result.data.reduce((a, b) => a + b, 0));\n});\n\n// Show immediate output\nconsole.log('This prints immediately while async operation runs');"
+    }
+  }
+}
