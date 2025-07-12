@@ -23,9 +23,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      PROD_IMAGE_SHA: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-      PROD_IMAGE_BRANCH: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}
     
     steps:
     - name: Checkout code
@@ -123,7 +120,7 @@ jobs:
       if: success()
       run: |
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
-          docker run --rm -i ${{ env.PROD_IMAGE_SHA }} 2>/dev/null)
+          docker run --rm -i ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
           echo "✅ Production image smoke test passed"
@@ -143,8 +140,8 @@ jobs:
           echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}\`"
           echo ""
           echo "### Production Image:"
-          echo "- \`${{ env.PROD_IMAGE_SHA }}\`"
-          echo "- \`${{ env.PROD_IMAGE_BRANCH }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}\`"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
           fi
