@@ -20,9 +20,6 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
       
-      - name: Auto-approve PR
-        run: gh pr review --approve "$PR_URL"
-      
       - name: Enable auto-merge for patch and minor updates
         if: |
           (steps.metadata.outputs.package-ecosystem == 'bundler' || 
