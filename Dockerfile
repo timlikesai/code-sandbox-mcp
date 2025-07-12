@@ -44,3 +44,4 @@ RUN mkdir -p /app/coverage /app/tmp && \
     chown -R sandbox:sandbox /app/coverage /app/tmp
 
 USER sandbox
+WORKDIR /app
