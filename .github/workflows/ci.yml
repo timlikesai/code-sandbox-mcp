@@ -56,7 +56,7 @@ jobs:
           type=sha
 
     - name: Build and push test image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         target: test
@@ -100,7 +100,7 @@ jobs:
 
     - name: Build and push production image
       if: success()
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         target: production
