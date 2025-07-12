@@ -6,7 +6,10 @@ on:
   pull_request:
     branches: [ main, master ]
   schedule:
-    - cron: '0 2 * * 1'  # Weekly on Mondays at 2 AM
+    - cron: '0 2 * * 1'
+
+permissions:
+  contents: read
 
 jobs:
   analyze:

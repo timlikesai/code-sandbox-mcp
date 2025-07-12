@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: production
-    image: code-sandbox:latest
+    image: ghcr.io/timlikesai/code-sandbox-mcp:latest
     stdin_open: true
     tty: true
     read_only: true
@@ -24,7 +24,7 @@ services:
     build:
       context: .
       target: test
-    image: code-sandbox-test:latest
+    image: ghcr.io/timlikesai/code-sandbox-mcp:test-latest
     volumes:
       - .:/app
       - /app/vendor  # Keep gems in container

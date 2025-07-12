@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Create Release
@@ -51,16 +54,20 @@ jobs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
+          type=raw,value=latest
     
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
+        target: production
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: |
+          type=registry,ref=ghcr.io/${{ github.repository }}:main
+          type=registry,ref=ghcr.io/${{ github.repository }}:latest
+        cache-to: type=inline
     
     - name: Create GitHub Release
       uses: actions/create-release@v1
