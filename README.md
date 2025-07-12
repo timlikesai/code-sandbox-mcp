@@ -12,6 +12,18 @@ A secure Docker-based MCP server for executing code in multiple languages, imple
 
 ## Installation
 
+### Using Pre-built Images (Recommended)
+
+```bash
+# Pull the latest image from GitHub Container Registry
+docker pull ghcr.io/timlikesai/code-sandbox-mcp:latest
+
+# Run directly
+docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
+```
+
+### Building from Source
+
 ```bash
 # Build the Docker image
 docker compose build
@@ -31,7 +43,7 @@ Add this configuration to:
   "mcpServers": {
     "code-sandbox": {
       "command": "docker",
-      "args": ["run", "--rm", "-i", "code-sandbox:latest"]
+      "args": ["run", "--rm", "-i", "ghcr.io/timlikesai/code-sandbox-mcp:latest"]
     }
   }
 }
@@ -39,7 +51,7 @@ Add this configuration to:
 
 **Claude Code CLI**: You can also add via command line:
 ```bash
-claude-code mcp add code-sandbox docker run --rm -i code-sandbox:latest
+claude-code mcp add code-sandbox docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 ```
 
 ### Advanced Configuration (Optional)
@@ -61,7 +73,7 @@ For additional security hardening:
         "--network", "none",
         "--security-opt", "no-new-privileges",
         "--cap-drop", "ALL",
-        "code-sandbox:latest"
+        "ghcr.io/timlikesai/code-sandbox-mcp:latest"
       ]
     }
   }
@@ -74,10 +86,10 @@ Test the Docker container directly:
 
 ```bash
 # Quick test
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"print(\"Hello World!\")"}}}' | docker run --rm -i code-sandbox:latest
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"print(\"Hello World!\")"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 
 # Debug mode
-docker run --rm -it code-sandbox:latest bash
+docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 ```
 
 ## Usage
@@ -313,7 +325,7 @@ docker compose run --rm code-sandbox-test bundle exec bundler-audit check
 ./examples/test_examples.sh
 
 # Test Docker container
-docker run --rm -it code-sandbox:latest bash
+docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 ```
 
 ### Code Quality Tools

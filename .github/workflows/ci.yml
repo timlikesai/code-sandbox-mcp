@@ -2,14 +2,27 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - '**'
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  TEST_IMAGE_TAG: test-${{ github.sha }}
+  FULL_TEST_IMAGE: ghcr.io/${{ github.repository }}:test-${{ github.sha }}
 
 jobs:
   test-and-build:
     name: Test and Build
-    runs-on: ubuntu-22.04  # Explicitly use Ubuntu 22.04 for stability
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - name: Checkout code
@@ -21,35 +34,93 @@ jobs:
         ruby-version: '3.4.4'
         bundler-cache: true
 
-    # Ensure Docker Compose v2 is available
-    - name: Verify Docker and Docker Compose
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=ref,event=pr
+          type=sha
+
+    - name: Build and push test image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: test
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}
+        cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+        cache-to: type=inline
+        push: true
+        load: true
+
+    - name: Run RSpec tests
       run: |
-        docker --version
-        docker compose version
+        docker run --rm -e COVERAGE=true -e COVERAGE_DIR=/tmp/coverage \
+          ${{ env.FULL_TEST_IMAGE }} \
+          sh -c "cd /app && bundle exec rspec"
 
-    # Step 1: Build test image (which builds production as base)
-    - name: Build test image
-      run: bundle exec rake docker:build_test
+    - name: Run RuboCop
+      run: |
+        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+          sh -c "cd /app && bundle exec rubocop"
 
-    # Step 2: Run all tests using same Rake tasks as local development
-    - name: Run tests and quality checks
-      run: bundle exec rake docker:test
+    - name: Run Reek
+      run: |
+        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+          sh -c "cd /app && bundle exec reek"
 
-    # Step 3: Test examples
+    - name: Run bundler-audit
+      run: |
+        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+          sh -c "cd /app && bundle exec bundler-audit check --update"
+
     - name: Test examples
       run: |
-        docker compose run --rm code-sandbox-test /app/examples/test_examples_in_container.sh
+        docker run --rm -v $PWD/examples:/app/examples:ro \
+          ${{ env.FULL_TEST_IMAGE }} \
+          /app/examples/test_examples_in_container.sh
 
-    # Step 4: Build production image (no-op since already built)
-    - name: Build production image
+    - name: Build and push production image
       if: success()
-      run: bundle exec rake docker:build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: production
+        tags: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}
+          ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
+        cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
+        cache-to: type=inline
+        push: true
+        load: true
 
-    # Step 5: Test production image works
     - name: Smoke test production image
       if: success()
       run: |
-        RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | docker run --rm -i code-sandbox:latest 2>/dev/null)
+        RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
+          docker run --rm -i ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
           echo "✅ Production image smoke test passed"
@@ -58,21 +129,20 @@ jobs:
           exit 1
         fi
 
-    # Future: Push to registry
-    # - name: Log in to Docker Hub
-    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
-    #   uses: docker/login-action@v3
-    #   with:
-    #     username: ${{ secrets.DOCKER_USERNAME }}
-    #     password: ${{ secrets.DOCKER_TOKEN }}
-    
-    # - name: Push production image
-    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
-    #   uses: docker/build-push-action@v5
-    #   with:
-    #     context: .
-    #     target: production
-    #     tags: |
-    #       username/code-sandbox:latest
-    #       username/code-sandbox:${{ github.sha }}
-    #     push: true
+    - name: Summary of pushed images
+      if: success()
+      run: |
+        {
+          echo "## Docker Images Published"
+          echo ""
+          echo "### Test Image:"
+          echo "- \`${{ env.FULL_TEST_IMAGE }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}\`"
+          echo ""
+          echo "### Production Image:"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}\`"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
+          fi
+        } >> $GITHUB_STEP_SUMMARY

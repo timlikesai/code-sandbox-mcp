@@ -16,7 +16,6 @@ WORKDIR /app
 
 COPY Gemfile Gemfile.lock* ./
 
-# Production stage - minimal dependencies
 FROM base AS production
 RUN bundle config set --local deployment 'true' && \
     bundle config set --local without 'development test' && \
@@ -24,7 +23,6 @@ RUN bundle config set --local deployment 'true' && \
 
 COPY . .
 
-# Copy and set up entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
@@ -36,16 +34,14 @@ USER sandbox
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD []
 
-# Test stage - extends production with dev dependencies
 FROM production AS test
 USER root
 
-# Install all dependencies including dev/test
 RUN bundle config unset --local without && \
     bundle install
 
-# Create writable directories for test outputs
 RUN mkdir -p /app/coverage /app/tmp && \
     chown -R sandbox:sandbox /app/coverage /app/tmp
 
 USER sandbox
+WORKDIR /app

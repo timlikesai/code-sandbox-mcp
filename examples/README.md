@@ -60,14 +60,14 @@ Generates example requests for multiple programming languages:
 
 To test any JSON example:
 ```bash
-cat examples/correct_tool_call.json | docker run --rm -i code-sandbox:latest
+cat examples/correct_tool_call.json | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 ```
 
 ### Testing Python Examples
 
 To execute a Python example through the MCP server:
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"'"$(cat examples/progress_tracking.py | jq -Rs .)"'"}}}' | docker run --rm -i code-sandbox:latest
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"'"$(cat examples/progress_tracking.py | jq -Rs .)"'"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 ```
 
 ### Understanding the Response Format
