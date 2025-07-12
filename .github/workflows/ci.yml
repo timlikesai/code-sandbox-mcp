@@ -21,7 +21,7 @@ jobs:
       safe-tag: ${{ steps.vars.outputs.SAFE_TAG }}
       test-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
       prod-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-    
+
     steps:
     - name: Sanitize branch name for Docker tags
       id: vars
@@ -37,7 +37,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -91,7 +91,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -148,7 +148,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -160,32 +160,52 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Verify architecture-specific images exist
+      run: |
+        echo "Checking if architecture-specific images are available..."
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}-amd64
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}-arm64
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}-amd64
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}-arm64
+
     - name: Create temporary test image manifest
       run: |
+        echo "Creating multi-arch test manifest..."
         docker buildx imagetools create -t ${{ needs.prepare.outputs.test-image-base }} \
           ${{ needs.prepare.outputs.test-image-base }}-amd64 \
           ${{ needs.prepare.outputs.test-image-base }}-arm64
 
+        echo "Verifying test manifest..."
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}
+
     - name: Create temporary production image manifest
       run: |
+        echo "Creating multi-arch production manifest..."
         docker buildx imagetools create -t ${{ needs.prepare.outputs.prod-image-base }} \
           ${{ needs.prepare.outputs.prod-image-base }}-amd64 \
           ${{ needs.prepare.outputs.prod-image-base }}-arm64
+
+        echo "Verifying production manifest..."
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}
 
   test:
     name: Test Multi-Arch Image on ${{ matrix.platform }}
     runs-on: ubuntu-22.04
     needs: [prepare, create-temp-manifests]
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
         platform: [linux/amd64, linux/arm64]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up QEMU
+    - name: Set up QEMU (only for ARM64 emulation)
+      if: matrix.platform == 'linux/arm64'
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
@@ -201,7 +221,25 @@ jobs:
     - name: Pull test image for ${{ matrix.platform }}
       run: |
         echo "Pulling multi-arch test image for ${{ matrix.platform }}..."
-        docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.test-image-base }}
+        echo "Image: ${{ needs.prepare.outputs.test-image-base }}"
+
+        # First, check if the manifest exists
+        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }} || {
+          echo "ERROR: Multi-arch manifest not found!"
+          echo "Expected image: ${{ needs.prepare.outputs.test-image-base }}"
+          exit 1
+        }
+
+        # Pull the specific platform variant with retry
+        for i in 1 2 3; do
+          if docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.test-image-base }}; then
+            echo "Successfully pulled image on attempt $i"
+            break
+          else
+            echo "Pull failed on attempt $i, retrying in 10 seconds..."
+            sleep 10
+          fi
+        done
 
     - name: Run RSpec tests
       run: |
@@ -239,12 +277,16 @@ jobs:
     name: Smoke Test Multi-Arch Production Image on ${{ matrix.platform }}
     runs-on: ubuntu-22.04
     needs: [prepare, create-temp-manifests, test]
+    permissions:
+      contents: read
+      packages: read
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
-    
+
     steps:
-    - name: Set up QEMU
+    - name: Set up QEMU (only for ARM64 emulation)
+      if: matrix.platform == 'linux/arm64'
       uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
@@ -261,11 +303,11 @@ jobs:
       run: |
         echo "Testing multi-arch production image on ${{ matrix.platform }}..."
         docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.prod-image-base }}
-        
+
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
           docker run --rm --platform ${{ matrix.platform }} -i \
           ${{ needs.prepare.outputs.prod-image-base }} 2>/dev/null)
-        
+
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
           echo "✅ Production image smoke test passed on ${{ matrix.platform }}"
@@ -281,7 +323,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -310,10 +352,10 @@ jobs:
       run: |
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
           ${{ needs.prepare.outputs.prod-image-base }}
-        
+
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main \
           ${{ needs.prepare.outputs.test-image-base }}
-        
+
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
           ${{ needs.prepare.outputs.prod-image-base }}
 
@@ -326,7 +368,7 @@ jobs:
       contents: read
       packages: write
     continue-on-error: true
-    
+
     steps:
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -350,7 +392,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [prepare, build-amd64, build-arm64, test, smoke-test, tag-and-push-final]
     if: always()
-    
+
     steps:
     - name: Summary of pushed images
       run: |
