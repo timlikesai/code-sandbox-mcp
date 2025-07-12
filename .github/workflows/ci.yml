@@ -15,6 +15,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   TEST_IMAGE_TAG: test-${{ github.sha }}
   FULL_TEST_IMAGE: ghcr.io/${{ github.repository }}:test-${{ github.sha }}
+  SAFE_BRANCH_NAME: ${{ github.head_ref && github.head_ref || github.ref_name }}
 
 jobs:
   test-and-build:
@@ -27,6 +28,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Sanitize branch name for Docker tags
+      id: vars
+      run: |
+        BRANCH_NAME="${{ env.SAFE_BRANCH_NAME }}"
+        SAFE_TAG=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+        echo "SAFE_TAG=$SAFE_TAG" >> $GITHUB_OUTPUT
 
     - name: Set up Ruby for Rake
       uses: ruby/setup-ruby@v1
@@ -62,10 +70,11 @@ jobs:
         target: test
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
         cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
         push: true
@@ -106,12 +115,13 @@ jobs:
         target: production
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
           ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
         cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
         cache-to: type=inline
         push: true
         load: true
@@ -137,11 +147,11 @@ jobs:
           echo ""
           echo "### Test Image:"
           echo "- \`${{ env.FULL_TEST_IMAGE }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref || github.ref_name }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}\`"
           echo ""
           echo "### Production Image:"
           echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref || github.ref_name }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}\`"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
           fi
