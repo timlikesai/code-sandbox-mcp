@@ -75,16 +75,10 @@ docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 
 ### CI/CD Commands
 ```bash
-# GitHub Actions runs these automatically in parallel jobs:
-# Build Job:
-# - Multi-arch Docker image builds (linux/amd64, linux/arm64)
-# - Pushes test and production images with layer caching
-# Test Jobs (Matrix):
-# - RSpec, RuboCop, Reek, bundler-audit on both architectures
-# - Integration tests using platform-specific images
-# Smoke Test Jobs (Matrix):
-# - Production image validation on both architectures
-# Additional:
+# GitHub Actions runs these automatically:
+# - All tests and quality checks on every push/PR
+# - Docker image builds with layer caching
+# - Integration tests using built images
 # - Weekly CodeQL security scanning
 # - Automated releases on git tags
 # - Dependabot auto-merge for patch/minor updates
@@ -173,7 +167,7 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 - **Multi-Architecture**: All images built for `linux/amd64` and `linux/arm64`
 - **Caching Strategy**: Uses inline cache with `cache-from` pulling from registry
 - **Auto-push**: CI pushes all builds, but `latest` only on main branch
-- **QEMU Emulation**: ARM64 builds use QEMU for cross-platform compilation
+- **Native Runners**: ARM64 builds use native `ubuntu-24.04-arm` runners (no QEMU needed)
 
 ### Security Decisions
 - **No Network Access**: `--network none` prevents any external connections
@@ -200,10 +194,11 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 ## GitHub Actions Workflows
 
 ### CI Workflow (`ci.yml`)
-- Builds test image first (includes production layers)
-- Runs all tests and quality checks
-- Builds and pushes production image
-- Uses `TEST_IMAGE_TAG` env var for DRY code
+- **Parallel Architecture Builds**: Separate AMD64 and ARM64 build jobs using native runners
+- **Multi-Arch Manifest Creation**: Merges architecture-specific images after builds complete
+- **Parallel Testing**: Test and smoke-test jobs run concurrently on both architectures
+- **Native ARM64 Support**: Uses `ubuntu-24.04-arm` runners for ARM64 builds/tests (no QEMU)
+- **Optimized Flow**: `prepare` → `build` (parallel) → `merge` → `test/smoke` (parallel) → `tag`
 
 ### Release Workflow (`release.yml`)
 - Triggers on version tags (`v*`)
