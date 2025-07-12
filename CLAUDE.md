@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Architecture
 
-This is a **Model Context Protocol (MCP) server** for secure code execution in Docker containers. The system streams output in real-time while maintaining MCP protocol compliance.
+This is a **Model Context Protocol (MCP) server** for secure code execution in Docker containers. The system streams output in real-time while maintaining MCP protocol compliance. Uses Alpine Linux for optimized size (727MB production image) and security.
 
 **Key Components:**
 - `Server` - Handles MCP protocol over stdin/stdout (JSON-RPC)
@@ -148,10 +148,13 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 ## Important Design Decisions
 
 ### Docker Image Strategy
-- **Single Repository**: Both test and production images use `ghcr.io/timlikesai/code-sandbox-mcp`
+- **Alpine Base**: Uses `ruby:3.4.4-alpine` for minimal size and security
+- **Multi-stage Build**: `base` → `builder` → `production` and `test` stages
+- **Production Image**: 727MB, contains only runtime files (`lib/`, `bin/`, gems)
+- **Test Image**: 908MB, includes development dependencies and test files
+- **Single Repository**: Both images use `ghcr.io/timlikesai/code-sandbox-mcp`
 - **Tag Prefixes**: Test images use `test-` prefix (e.g., `test-latest`, `test-main`)
-- **Layer Sharing**: This approach maximizes Docker layer reuse between test and production builds
-- **Multi-stage Build**: Dockerfile uses targets (`base`, `production`, `test`) for efficient builds
+- **Layer Sharing**: Optimized caching between stages and builds
 
 ### GitHub Container Registry Integration
 - **Image Tags**:
