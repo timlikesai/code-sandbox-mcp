@@ -21,7 +21,7 @@ jobs:
       safe-tag: ${{ steps.vars.outputs.SAFE_TAG }}
       test-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
       prod-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
+    
     steps:
     - name: Sanitize branch name for Docker tags
       id: vars
@@ -32,12 +32,12 @@ jobs:
 
   build-amd64:
     name: Build AMD64 Images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: prepare
     permissions:
       contents: read
       packages: write
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -60,7 +60,6 @@ jobs:
         platforms: linux/amd64
         tags: |
           ${{ needs.prepare.outputs.test-image-base }}-amd64
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-amd64
         cache-from: |
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-amd64
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-amd64
@@ -77,8 +76,6 @@ jobs:
         platforms: linux/amd64
         tags: |
           ${{ needs.prepare.outputs.prod-image-base }}-amd64
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-amd64
-          ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:latest-amd64', env.REGISTRY, env.IMAGE_NAME) || '' }}
         cache-from: |
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-amd64
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-amd64
@@ -89,12 +86,12 @@ jobs:
 
   build-arm64:
     name: Build ARM64 Images
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-22.04
     needs: prepare
     permissions:
       contents: read
       packages: write
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -120,7 +117,6 @@ jobs:
         platforms: linux/arm64
         tags: |
           ${{ needs.prepare.outputs.test-image-base }}-arm64
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-arm64
         cache-from: |
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-arm64
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-arm64
@@ -137,8 +133,6 @@ jobs:
         platforms: linux/arm64
         tags: |
           ${{ needs.prepare.outputs.prod-image-base }}-arm64
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-arm64
-          ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:latest-arm64', env.REGISTRY, env.IMAGE_NAME) || '' }}
         cache-from: |
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-arm64
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-arm64
@@ -147,14 +141,14 @@ jobs:
         cache-to: type=inline
         push: true
 
-  merge-manifests:
-    name: Create Multi-Arch Manifests
+  create-temp-manifests:
+    name: Create Temporary Multi-Arch Manifests
     runs-on: ubuntu-22.04
     needs: [prepare, build-amd64, build-arm64]
     permissions:
       contents: read
       packages: write
-
+    
     steps:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -166,42 +160,27 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Create and push test image manifest
+    - name: Create temporary test image manifest
       run: |
         docker buildx imagetools create -t ${{ needs.prepare.outputs.test-image-base }} \
           ${{ needs.prepare.outputs.test-image-base }}-amd64 \
           ${{ needs.prepare.outputs.test-image-base }}-arm64
 
-        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }} \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-amd64 \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-arm64
-
-    - name: Create and push production image manifest
+    - name: Create temporary production image manifest
       run: |
         docker buildx imagetools create -t ${{ needs.prepare.outputs.prod-image-base }} \
           ${{ needs.prepare.outputs.prod-image-base }}-amd64 \
           ${{ needs.prepare.outputs.prod-image-base }}-arm64
 
-        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }} \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-amd64 \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-arm64
-
-    - name: Create and push latest manifest (main branch only)
-      if: github.ref == 'refs/heads/main'
-      run: |
-        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-amd64 \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-arm64
-
   test:
-    name: Test on ${{ matrix.platform }}
+    name: Test Multi-Arch Image on ${{ matrix.platform }}
     runs-on: ubuntu-22.04
-    needs: [prepare, merge-manifests]
+    needs: [prepare, create-temp-manifests]
     strategy:
       fail-fast: false
       matrix:
         platform: [linux/amd64, linux/arm64]
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -221,7 +200,7 @@ jobs:
 
     - name: Pull test image for ${{ matrix.platform }}
       run: |
-        echo "Pulling test image for ${{ matrix.platform }}..."
+        echo "Pulling multi-arch test image for ${{ matrix.platform }}..."
         docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.test-image-base }}
 
     - name: Run RSpec tests
@@ -257,13 +236,13 @@ jobs:
           /app/examples/test_examples_in_container.sh
 
   smoke-test:
-    name: Smoke Test Production Images
+    name: Smoke Test Multi-Arch Production Image on ${{ matrix.platform }}
     runs-on: ubuntu-22.04
-    needs: [prepare, merge-manifests, test]
+    needs: [prepare, create-temp-manifests, test]
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
-
+    
     steps:
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -280,13 +259,13 @@ jobs:
 
     - name: Smoke test production image on ${{ matrix.platform }}
       run: |
-        echo "Testing production image on ${{ matrix.platform }}..."
+        echo "Testing multi-arch production image on ${{ matrix.platform }}..."
         docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.prod-image-base }}
-
+        
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
           docker run --rm --platform ${{ matrix.platform }} -i \
           ${{ needs.prepare.outputs.prod-image-base }} 2>/dev/null)
-
+        
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
           echo "✅ Production image smoke test passed on ${{ matrix.platform }}"
@@ -295,37 +274,110 @@ jobs:
           exit 1
         fi
 
+  tag-and-push-final:
+    name: Tag and Push Final Images
+    runs-on: ubuntu-22.04
+    needs: [prepare, smoke-test]
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create final test image tags
+      run: |
+        # Tag the temporary multi-arch manifest with the branch tag
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }} \
+          ${{ needs.prepare.outputs.test-image-base }}
+
+    - name: Create final production image tags
+      run: |
+        # Tag the temporary multi-arch manifest with the branch tag
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }} \
+          ${{ needs.prepare.outputs.prod-image-base }}
+
+    - name: Create and push latest tag (main branch only)
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+          ${{ needs.prepare.outputs.prod-image-base }}
+        
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main \
+          ${{ needs.prepare.outputs.test-image-base }}
+        
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
+          ${{ needs.prepare.outputs.prod-image-base }}
+
+  cleanup-arch-specific:
+    name: Cleanup Architecture-Specific Images
+    runs-on: ubuntu-22.04
+    needs: [prepare, tag-and-push-final]
+    if: always() && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    continue-on-error: true
+    
+    steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Delete architecture-specific tags
+      run: |
+        # Note: This requires the gh CLI and appropriate permissions
+        # For now, we'll just document what tags exist
+        echo "Architecture-specific images that could be cleaned up:"
+        echo "- ${{ needs.prepare.outputs.test-image-base }}-amd64"
+        echo "- ${{ needs.prepare.outputs.test-image-base }}-arm64"
+        echo "- ${{ needs.prepare.outputs.prod-image-base }}-amd64"
+        echo "- ${{ needs.prepare.outputs.prod-image-base }}-arm64"
+
   summary:
     name: Build Summary
     runs-on: ubuntu-22.04
-    needs: [prepare, build-amd64, build-arm64, merge-manifests, test, smoke-test]
+    needs: [prepare, build-amd64, build-arm64, test, smoke-test, tag-and-push-final]
     if: always()
-
+    
     steps:
     - name: Summary of pushed images
       run: |
         {
           echo "## Docker Images Published"
           echo ""
-          echo "### Test Images (Multi-arch: linux/amd64, linux/arm64):"
-          echo "- \`${{ needs.prepare.outputs.test-image-base }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}\`"
+          echo "### Multi-Arch Images (linux/amd64, linux/arm64):"
           echo ""
-          echo "### Production Images (Multi-arch: linux/amd64, linux/arm64):"
-          echo "- \`${{ needs.prepare.outputs.prod-image-base }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}\`"
+          echo "#### Test Images:"
+          echo "- \`${{ needs.prepare.outputs.test-image-base }}\` (SHA)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}\` (branch)"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
+            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main\`"
           fi
           echo ""
-          echo "### Architecture-specific Images:"
-          echo "- AMD64: \`${{ needs.prepare.outputs.prod-image-base }}-amd64\`"
-          echo "- ARM64: \`${{ needs.prepare.outputs.prod-image-base }}-arm64\`"
+          echo "#### Production Images:"
+          echo "- \`${{ needs.prepare.outputs.prod-image-base }}\` (SHA)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}\` (branch)"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main\`"
+            echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
+          fi
           echo ""
           echo "### Build Results:"
           echo "- AMD64 Build: ${{ needs.build-amd64.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "- ARM64 Build: ${{ needs.build-arm64.result == 'success' && '✅ Passed' || '❌ Failed' }}"
-          echo "- Manifest Creation: ${{ needs.merge-manifests.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "- Tests: ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "- Smoke Tests: ${{ needs.smoke-test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "- Final Tagging: ${{ needs.tag-and-push-final.result == 'success' && '✅ Passed' || '❌ Failed' }}"
         } >> $GITHUB_STEP_SUMMARY
