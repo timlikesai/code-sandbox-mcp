@@ -31,5 +31,6 @@ services:
     working_dir: /app
     environment:
       - COVERAGE=true
+      - COVERAGE_DIR=/tmp/coverage  # Write coverage to /tmp which is writable
     stdin_open: true
     tty: true

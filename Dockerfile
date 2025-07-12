@@ -44,4 +44,8 @@ USER root
 RUN bundle config unset --local without && \
     bundle install
 
+# Create writable directories for test outputs
+RUN mkdir -p /app/coverage /app/tmp && \
+    chown -R sandbox:sandbox /app/coverage /app/tmp
+
 USER sandbox

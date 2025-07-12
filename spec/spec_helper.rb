@@ -5,6 +5,9 @@ if ENV['COVERAGE'] || ENV['CI']
   require 'simplecov'
   require 'simplecov-console'
 
+  # Set coverage directory - use COVERAGE_DIR env var or default to ./coverage
+  SimpleCov.coverage_dir ENV.fetch('COVERAGE_DIR', 'coverage')
+
   SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new([
                                                                    SimpleCov::Formatter::HTMLFormatter,
                                                                    SimpleCov::Formatter::Console
