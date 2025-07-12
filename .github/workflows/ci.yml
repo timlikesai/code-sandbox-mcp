@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -71,7 +73,6 @@ jobs:
         cache-from: |
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
         pull: true
