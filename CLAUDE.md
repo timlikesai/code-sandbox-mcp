@@ -75,10 +75,16 @@ docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 
 ### CI/CD Commands
 ```bash
-# GitHub Actions runs these automatically:
-# - All tests and quality checks on every push/PR
-# - Docker image builds with layer caching
-# - Integration tests using built images
+# GitHub Actions runs these automatically in parallel jobs:
+# Build Job:
+# - Multi-arch Docker image builds (linux/amd64, linux/arm64)
+# - Pushes test and production images with layer caching
+# Test Jobs (Matrix):
+# - RSpec, RuboCop, Reek, bundler-audit on both architectures
+# - Integration tests using platform-specific images
+# Smoke Test Jobs (Matrix):
+# - Production image validation on both architectures
+# Additional:
 # - Weekly CodeQL security scanning
 # - Automated releases on git tags
 # - Dependabot auto-merge for patch/minor updates
@@ -150,6 +156,7 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 ### Docker Image Strategy
 - **Alpine Base**: Uses `ruby:3.4.4-alpine` for minimal size and security
 - **Multi-stage Build**: `base` → `builder` → `production` and `test` stages
+- **Multi-Architecture**: Supports both `linux/amd64` and `linux/arm64` platforms
 - **Production Image**: 727MB, contains only runtime files (`lib/`, `bin/`, gems)
 - **Test Image**: 908MB, includes development dependencies and test files
 - **Single Repository**: Both images use `ghcr.io/timlikesai/code-sandbox-mcp`
@@ -158,13 +165,15 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 
 ### GitHub Container Registry Integration
 - **Image Tags**:
-  - `latest` - Only pushed from main branch
-  - `main` - Latest main branch build
-  - `<branch-name>` - Feature branch builds
-  - `<sha>` - Commit-specific builds
-  - `test-<tag>` - Test image variants
+  - `latest` - Only pushed from main branch (multi-arch)
+  - `main` - Latest main branch build (multi-arch)
+  - `<branch-name>` - Feature branch builds (multi-arch)
+  - `<sha>` - Commit-specific builds (multi-arch)
+  - `test-<tag>` - Test image variants (multi-arch)
+- **Multi-Architecture**: All images built for `linux/amd64` and `linux/arm64`
 - **Caching Strategy**: Uses inline cache with `cache-from` pulling from registry
 - **Auto-push**: CI pushes all builds, but `latest` only on main branch
+- **QEMU Emulation**: ARM64 builds use QEMU for cross-platform compilation
 
 ### Security Decisions
 - **No Network Access**: `--network none` prevents any external connections

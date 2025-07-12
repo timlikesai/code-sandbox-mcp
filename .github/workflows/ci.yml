@@ -12,18 +12,19 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  TEST_IMAGE_TAG: test-${{ github.sha }}
-  FULL_TEST_IMAGE: ghcr.io/${{ github.repository }}:test-${{ github.sha }}
-  SAFE_BRANCH_NAME: ${{ github.head_ref && github.head_ref || github.ref_name }}
 
 jobs:
-  test-and-build:
-    name: Test and Build
+  build:
+    name: Build and Push Images
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
-    
+    outputs:
+      test-image: ${{ steps.meta.outputs.tags }}
+      production-image: ${{ steps.prod-meta.outputs.tags }}
+      safe-tag: ${{ steps.vars.outputs.SAFE_TAG }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -31,15 +32,91 @@ jobs:
     - name: Sanitize branch name for Docker tags
       id: vars
       run: |
-        BRANCH_NAME="${{ env.SAFE_BRANCH_NAME }}"
+        BRANCH_NAME="${{ github.head_ref && github.head_ref || github.ref_name }}"
         SAFE_TAG=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
         echo "SAFE_TAG=$SAFE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Set up Ruby for Rake
-      uses: ruby/setup-ruby@v1
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
       with:
-        ruby-version: '3.4.4'
-        bundler-cache: true
+        platforms: linux/amd64,linux/arm64
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract test image metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=raw,value=test-${{ github.sha }}
+          type=raw,value=test-${{ steps.vars.outputs.SAFE_TAG }}
+
+    - name: Build and push test image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        target: test
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+        cache-to: type=inline
+        pull: true
+        push: true
+
+    - name: Extract production image metadata
+      id: prod-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=raw,value=${{ github.sha }}
+          type=raw,value=${{ steps.vars.outputs.SAFE_TAG }}
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+    - name: Build and push production image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        target: production
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.prod-meta.outputs.tags }}
+        labels: ${{ steps.prod-meta.outputs.labels }}
+        cache-from: |
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
+        cache-to: type=inline
+        push: true
+
+  test:
+    name: Test on ${{ matrix.platform }}
+    runs-on: ubuntu-22.04
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -51,107 +128,107 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=tag
-          type=ref,event=pr
-          type=sha
-
-    - name: Build and push test image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        target: test
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
-        cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-        cache-to: type=inline
-        pull: true
-        push: true
-        load: true
+    - name: Pull test image for ${{ matrix.platform }}
+      run: |
+        echo "Pulling test image for ${{ matrix.platform }}..."
+        docker pull --platform ${{ matrix.platform }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
 
     - name: Run RSpec tests
       run: |
-        docker run --rm -e COVERAGE=true -e COVERAGE_DIR=/tmp/coverage \
-          ${{ env.FULL_TEST_IMAGE }} \
+        docker run --rm --platform ${{ matrix.platform }} \
+          -e COVERAGE=true -e COVERAGE_DIR=/tmp/coverage \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec rspec"
 
     - name: Run RuboCop
       run: |
-        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+        docker run --rm --platform ${{ matrix.platform }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec rubocop"
 
     - name: Run Reek
       run: |
-        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+        docker run --rm --platform ${{ matrix.platform }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec reek"
 
     - name: Run bundler-audit
       run: |
-        docker run --rm ${{ env.FULL_TEST_IMAGE }} \
+        docker run --rm --platform ${{ matrix.platform }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec bundler-audit check --update"
 
     - name: Test examples
       run: |
-        docker run --rm -v $PWD/examples:/app/examples:ro \
-          ${{ env.FULL_TEST_IMAGE }} \
+        docker run --rm --platform ${{ matrix.platform }} \
+          -v $PWD/examples:/app/examples:ro \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           /app/examples/test_examples_in_container.sh
 
-    - name: Build and push production image
-      if: success()
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        target: production
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
-          ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
-        cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
-        cache-to: type=inline
-        push: true
-        load: true
+  smoke-test:
+    name: Smoke Test Production Images
+    runs-on: ubuntu-22.04
+    needs: [build, test]
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
 
-    - name: Smoke test production image
-      if: success()
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Smoke test production image on ${{ matrix.platform }}
       run: |
+        echo "Testing production image on ${{ matrix.platform }}..."
+        docker pull --platform ${{ matrix.platform }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
-          docker run --rm -i ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
+          docker run --rm --platform ${{ matrix.platform }} -i \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
+
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
-          echo "✅ Production image smoke test passed"
+          echo "✅ Production image smoke test passed on ${{ matrix.platform }}"
         else
-          echo "❌ Production image smoke test failed"
+          echo "❌ Production image smoke test failed on ${{ matrix.platform }}"
           exit 1
         fi
 
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-22.04
+    needs: [build, test, smoke-test]
+    if: always()
+
+    steps:
     - name: Summary of pushed images
-      if: success()
       run: |
         {
           echo "## Docker Images Published"
           echo ""
-          echo "### Test Image:"
-          echo "- \`${{ env.FULL_TEST_IMAGE }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ steps.vars.outputs.SAFE_TAG }}\`"
+          echo "### Test Images (Multi-arch: linux/amd64, linux/arm64):"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.build.outputs.safe-tag }}\`"
           echo ""
-          echo "### Production Image:"
+          echo "### Production Images (Multi-arch: linux/amd64, linux/arm64):"
           echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\`"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.SAFE_TAG }}\`"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.safe-tag }}\`"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
           fi
+          echo ""
+          echo "### Test Results:"
+          echo "- Tests on linux/amd64: ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "- Tests on linux/arm64: ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "- Smoke tests: ${{ needs.smoke-test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
         } >> $GITHUB_STEP_SUMMARY
