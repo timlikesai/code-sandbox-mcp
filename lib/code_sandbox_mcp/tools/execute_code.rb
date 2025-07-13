@@ -8,37 +8,40 @@ module CodeSandboxMcp
   module Tools
     class ExecuteCode < Base
       tool_name 'execute_code'
-      description 'Execute code in a secure Docker sandbox with automatic session management. ' \
-                  'State is preserved between executions for each language. ' \
-                  'Supports Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish, ' \
-                  'Java, Clojure, Kotlin, Groovy, and Scala.'
+      description 'Execute code securely in isolated Docker containers with persistent sessions. ' \
+                  'Each language maintains its own session state - variables, functions, imports, and files persist. ' \
+                  'Perfect for interactive development, multi-step tutorials, building multi-file applications, ' \
+                  'and demonstrating complex workflows. Supports 12 languages: Python, JavaScript, TypeScript, Ruby, ' \
+                  'Bash, Zsh, Fish, Java, Clojure, Kotlin, Groovy, Scala. ' \
+                  'Use "save: true" and "filename" to create persistent files for multi-file projects. ' \
+                  'Network access enabled for package installation and API calls.'
       input_schema(
         type: 'object',
         properties: {
           language: {
             type: 'string',
-            description: 'Programming language',
+            description: 'Programming language for execution. Each language has isolated sessions.',
             enum: LANGUAGES.keys
           },
           code: {
             type: 'string',
-            description: 'Code to execute'
+            description: 'Source code to execute. Can reference previously defined variables, functions, and modules.'
           },
           session_id: {
             type: 'string',
-            description: 'Optional session ID. If not provided, uses default session for the language.'
+            description: 'Custom session identifier for isolation. Default sessions shared per language.'
           },
           reset_session: {
             type: 'boolean',
-            description: 'Reset the session before executing (default: false)'
+            description: 'Clear all session state before execution - removes variables, functions, imports, and files.'
           },
           filename: {
             type: 'string',
-            description: 'Optional filename to use instead of default "main" + extension'
+            description: 'Custom filename (with or without extension) for the code file. Enables importing/requiring.'
           },
           save: {
             type: 'boolean',
-            description: 'Save the file to session directory for persistence (default: false)'
+            description: 'Persist file in session directory for multi-file projects and imports.'
           }
         },
         required: %w[language code]
@@ -46,21 +49,20 @@ module CodeSandboxMcp
 
       class << self
         def call(language:, code:, session_id: nil, reset_session: false, filename: nil, save: false)
-          # Use default session for language if no session_id provided
           session_id ||= "default-#{language}"
-
-          # Reset session if requested
           session_manager.clear_session(session_id) if reset_session
 
-          # Execute in session
-          result = session_manager.execute_in_session(session_id, language, code, executor, filename: filename,
-                                                                                            save: save)
+          result = execute_in_session(session_id, language, code, filename, save)
           build_response(code, language, result, session_id, filename)
         rescue StandardError => e
           create_error_response("Error: #{e.message}")
         end
 
         private
+
+        def execute_in_session(session_id, language, code, filename, save)
+          session_manager.execute_in_session(session_id, language, code, executor, filename: filename, save: save)
+        end
 
         def build_response(code, language, result, session_id, filename = nil)
           content = [

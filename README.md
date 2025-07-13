@@ -198,52 +198,53 @@ See [examples/README.md](examples/README.md) for comprehensive examples includin
 - Error handling
 - Response format documentation
 
-## Development
+## Testing
 
-### Local Development
+All tests run in Docker containers for security and consistency.
+
+### Quick Start
 
 ```bash
-# Install dependencies locally
-bundle install
+# Build the Docker images
+docker compose build
 
-# Run tests
-bundle exec rspec
+# Run all tests (unit tests + example integration tests)
+./examples/test_all_examples.sh
 
-# Run linter
-bundle exec rubocop
-bundle exec rubocop --autocorrect-all  # Auto-fix style issues
-
-# Security checks
-bundle exec bundler-audit check        # Check for dependency vulnerabilities
-
-# Run all checks
-bundle exec rake
+# With verbose output
+VERBOSE=true ./examples/test_all_examples.sh
 ```
 
-### Docker Testing
+### Docker Commands
 
 ```bash
-# Run all tests in Docker
-bundle exec rake docker:test
+# Build test image
+docker compose build code-sandbox-test
 
-# Build images  
-bundle exec rake docker:build
-
-# Interactive shell
-bundle exec rake docker:shell
-
-# Individual test commands
+# Run unit tests
 docker compose run --rm code-sandbox-test bundle exec rspec
+
+# Run code quality checks
 docker compose run --rm code-sandbox-test bundle exec rubocop
+docker compose run --rm code-sandbox-test bundle exec bundler-audit check --update
+
+# Run all checks at once
+docker compose run --rm code-sandbox-test bundle exec rake
+
+# Interactive shell in test container
+docker compose run --rm code-sandbox-test bash
 ```
 
-### Testing
+### Testing Examples
 
 ```bash
-# Test examples
-./examples/test_examples.sh
+# Test all examples (same as CI) - uses production image
+docker run --rm -v $PWD/examples:/app/examples:ro ghcr.io/timlikesai/code-sandbox-mcp:latest /app/examples/test_examples_in_container.sh
 
-# Interactive debugging
+# Test single example
+cat examples/correct_tool_call.json | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
+
+# Debug mode
 docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 ```
 

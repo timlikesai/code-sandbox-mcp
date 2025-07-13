@@ -202,7 +202,7 @@ RSpec.describe CodeSandboxMcp::Tools::ExecuteCode do
   describe 'tool metadata' do
     it 'has valid metadata' do
       expect_valid_tool_metadata(described_class, 'execute_code')
-      expect(described_class.description_value).to include('Execute code in a secure Docker sandbox')
+      expect(described_class.description_value).to include('Execute code securely in isolated Docker containers')
     end
   end
 end

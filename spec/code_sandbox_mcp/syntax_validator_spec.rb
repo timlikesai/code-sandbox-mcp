@@ -109,6 +109,64 @@ RSpec.describe CodeSandboxMcp::SyntaxValidator do
       end
     end
 
+    context 'fallback error handling when regex patterns fail' do
+      it 'handles Python errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('python3', '-m', 'py_compile', anything)
+                                          .and_return(['', 'SyntaxError: some weird python error format', double(success?: false)])
+
+        expect { described_class.validate('python', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Python.*some weird python error format/)
+      end
+
+      it 'handles Ruby errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('ruby', '-c', '-e', 'invalid code')
+                                          .and_return(['', 'syntax error: weird ruby error format', double(success?: false)])
+
+        expect { described_class.validate('ruby', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Ruby.*weird ruby error format/)
+      end
+
+      it 'handles JavaScript errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('node', '--check', anything)
+                                          .and_return(['', 'weird javascript error format', double(success?: false)])
+
+        expect { described_class.validate('javascript', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /JavaScript.*weird javascript error format/)
+      end
+
+      it 'handles Bash errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('bash', '-n', '-c', 'invalid code')
+                                          .and_return(['', 'bash: weird bash error format', double(success?: false)])
+
+        expect { described_class.validate('bash', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Bash.*weird bash error format/)
+      end
+
+      it 'handles Zsh shell errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('zsh', '-n', '-c', 'invalid code')
+                                          .and_return(['', 'zsh: weird shell error format', double(success?: false)])
+
+        expect { described_class.validate('zsh', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Zsh.*weird shell error format/)
+      end
+
+      it 'handles Fish shell errors that do not match line number patterns' do
+        allow(Open3).to receive(:capture3).with('fish', '--no-execute', '-c', 'invalid code')
+                                          .and_return(['', 'fish: weird shell error format', double(success?: false)])
+
+        expect { described_class.validate('fish', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Fish.*weird shell error format/)
+      end
+
+      it 'handles Zsh shell errors that DO match line number patterns (lines 175-177)' do
+        allow(Open3).to receive(:capture3).with('zsh', '-n', '-c', 'invalid code')
+                                          .and_return(['', 'zsh: line 5: syntax error near unexpected token', double(success?: false)])
+
+        expect { described_class.validate('zsh', 'invalid code') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /Zsh syntax error on line 5.*syntax error near unexpected token/)
+      end
+    end
+
     context 'with TypeScript' do
       it 'returns nil (skips validation)' do
         expect(described_class.validate('typescript', 'const x: string = "Hello"')).to be_nil

@@ -23,7 +23,6 @@ module CodeSandboxMcp
       @mutex = Mutex.new
     end
 
-    # Create a new session with a unique ID
     def create_session(session_id: nil)
       perform_session_cleanup
       session_id ||= generate_session_id
@@ -38,11 +37,9 @@ module CodeSandboxMcp
     private
 
     def perform_session_cleanup
-      # Clean up expired sessions first
       expired_ids = @mutex.synchronize { cleanup_expired_sessions }
       expired_ids.each { |id| clear_session(id) }
 
-      # Enforce session limit
       ids_to_remove = @mutex.synchronize { enforce_session_limit }
       ids_to_remove&.each { |id| clear_session(id) }
     end
@@ -155,6 +152,24 @@ module CodeSandboxMcp
           }
         end
       end
+    end
+
+    # Save code to session directory
+    def save_code_to_session(session_id, language, code, filename)
+      session = get_or_create_session(session_id)
+
+      lang_config = LANGUAGES[language]
+      extension = lang_config[:extension]
+      filename ||= "main#{extension}"
+      filename += extension unless filename.end_with?(extension)
+
+      data_dir = File.join(session[:directory], 'data')
+      FileUtils.mkdir_p(data_dir)
+
+      file_path = File.join(data_dir, filename)
+      File.write(file_path, code)
+
+      file_path
     end
 
     private
@@ -328,23 +343,6 @@ module CodeSandboxMcp
         line =~ /^\s*@\w+\s*=/
     end
 
-    def save_code_to_session(session_id, language, code, filename)
-      session = get_or_create_session(session_id)
-
-      lang_config = LANGUAGES[language]
-      extension = lang_config[:extension]
-      filename ||= "main#{extension}"
-      filename += extension unless filename.end_with?(extension)
-
-      data_dir = File.join(session[:directory], 'data')
-      FileUtils.mkdir_p(data_dir)
-
-      file_path = File.join(data_dir, filename)
-      File.write(file_path, code)
-
-      file_path
-    end
-
     def execute_with_custom_filename(executor, language, code, working_dir, filename)
       lang_config = LANGUAGES[language]
       extension = lang_config[:extension]
@@ -353,7 +351,8 @@ module CodeSandboxMcp
       file_path = File.join(working_dir, filename)
       File.write(file_path, code)
 
-      executor.execute_command(lang_config[:command], file_path, working_dir)
+      # Use execute_with_dir instead of calling private execute_command
+      executor.execute_with_dir(language, code, working_dir)
     end
   end
 end

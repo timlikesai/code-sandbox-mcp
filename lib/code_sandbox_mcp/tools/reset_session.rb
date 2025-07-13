@@ -5,17 +5,20 @@ require_relative '../session_manager'
 
 module CodeSandboxMcp
   module Tools
-    # MCP tool for resetting code execution sessions
     class ResetSession < Base
       tool_name 'reset_session'
-      description 'Reset the code execution session for a specific language or all languages.'
+      description 'Clear session state and files for clean restarts. ' \
+                  'Removes all variables, functions, imports, classes, and saved files from the specified sessions. ' \
+                  'Essential for starting fresh when sessions become cluttered or when switching between projects. ' \
+                  'Can reset individual languages or all sessions at once. ' \
+                  'Use before multi-file examples or when troubleshooting import/dependency issues.'
 
       input_schema(
         type: 'object',
         properties: {
           language: {
             type: 'string',
-            description: 'Language to reset. If not provided, resets all language sessions.',
+            description: 'Language session to reset (clears variables, functions, imports, files) or "all".',
             enum: LANGUAGES.keys + ['all']
           }
         }
@@ -24,13 +27,11 @@ module CodeSandboxMcp
       class << self
         def call(language: 'all')
           if language == 'all'
-            # Clear all default language sessions
             LANGUAGES.each_key do |lang|
               session_manager.clear_session("default-#{lang}")
             end
             message = 'All language sessions have been reset.'
           else
-            # Clear specific language session
             session_manager.clear_session("default-#{language}")
             message = "#{language.capitalize} session has been reset."
           end

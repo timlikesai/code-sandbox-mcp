@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "ruby",
+      "code": "require 'open3'\n\nputs '=== RUBY GEM INSTALLATION DEMO ==='\n\ngems = ['httparty', 'json', 'colorize']\n\ngems.each do |gem_name|\n  puts \"Installing gem: #{gem_name}\"\n  \n  stdout, stderr, status = Open3.capture3(\"gem install #{gem_name} --user-install --no-document\")\n  \n  if status.success?\n    puts \"✓ #{gem_name} installed successfully\"\n  else\n    puts \"✗ #{gem_name} installation failed: #{stderr.strip}\"\n  end\nend\n\nputs \"\\n=== TESTING INSTALLED GEMS ===\"\n\nbegin\n  require 'httparty'\n  puts '✓ httparty: Successfully required HTTP client gem'\n  \n  response = HTTParty.get('https://httpbin.org/json')\n  puts \"✓ httparty: HTTP #{response.code} from httpbin.org\"\n  puts \"✓ httparty: Response data type: #{response.parsed_response.class}\"\nrescue LoadError => e\n  puts \"✗ httparty load failed: #{e.message}\"\nrescue => e\n  puts \"✗ httparty request failed: #{e.message}\"\nend\n\nbegin\n  require 'json'\n  data = { message: 'Hello from Ruby!', timestamp: Time.now.to_s }\n  json_string = JSON.generate(data)\n  parsed_data = JSON.parse(json_string)\n  puts \"✓ json: Generated and parsed JSON successfully\"\n  puts \"✓ json: Message: #{parsed_data['message']}\"\nrescue LoadError => e\n  puts \"✗ json load failed: #{e.message}\"\nrescue => e\n  puts \"✗ json processing failed: #{e.message}\"\nend\n\nbegin\n  require 'colorize'\n  puts \"✓ colorize: #{\"Colorful text formatting works!\".colorize(:green)}\"\nrescue LoadError => e\n  puts \"✗ colorize load failed: #{e.message}\"\nrescue => e\n  puts \"✗ colorize failed: #{e.message}\"\nend\n\nputs \"\\n=== SUMMARY ===\"\nbegin\n  gem_paths = Gem.path\n  puts \"Gem installation paths:\"\n  gem_paths.each { |path| puts \"  #{path}\" }\n  \n  installed_gems = `gem list --local`.split(\"\\n\").select { |line| gems.any? { |g| line.include?(g) } }\n  puts \"\\nInstalled gems (relevant):\"\n  installed_gems.each { |gem| puts \"  #{gem}\" }\nrescue => e\n  puts \"Could not retrieve gem information: #{e.message}\"\nend\n\nputs \"Container isolation ensures host system safety\""
+    }
+  }
+}

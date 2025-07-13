@@ -80,4 +80,27 @@ RSpec.describe CodeSandboxMcp::Tools do
       expect(CodeSandboxMcp::Tools::ResetSession).to be_a(Class)
     end
   end
+
+  describe 'Base class' do
+    describe '.common_input_schema' do
+      it 'returns a valid schema for common tool inputs' do
+        schema = CodeSandboxMcp::Tools::Base.common_input_schema
+
+        expect(schema[:type]).to eq('object')
+        expect(schema[:properties]).to be_a(Hash)
+        expect(schema[:required]).to eq(%w[language code])
+
+        expect(schema[:properties][:language]).to include(
+          type: 'string',
+          description: 'Programming language',
+          enum: CodeSandboxMcp::LANGUAGES.keys
+        )
+
+        expect(schema[:properties][:code]).to include(
+          type: 'string',
+          description: 'Code content'
+        )
+      end
+    end
+  end
 end

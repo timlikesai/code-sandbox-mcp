@@ -64,6 +64,96 @@ RSpec.describe CodeSandboxMcp::Tools::ValidateCode do
         expect(result.to_h[:content].first[:text]).to eq('Syntax validation successful')
       end
     end
+
+    context 'with save functionality' do
+      let(:session_id) { 'test-session' }
+      let(:temp_dir) { Dir.mktmpdir }
+
+      before do
+        allow(CodeSandboxMcp::SessionManager.instance).to receive(:get_session)
+          .with(session_id).and_return(directory: temp_dir)
+        allow(CodeSandboxMcp::SessionManager.instance).to receive(:create_session)
+          .with(session_id: session_id).and_return(session_id)
+        allow(CodeSandboxMcp::SessionManager.instance).to receive(:save_code_to_session) do |_session_id, language, code, filename|
+          data_dir = File.join(temp_dir, 'data')
+          FileUtils.mkdir_p(data_dir)
+          
+          lang_config = CodeSandboxMcp::LANGUAGES[language]
+          extension = lang_config[:extension]
+          filename ||= "main#{extension}"
+          filename += extension unless filename.end_with?(extension)
+          
+          file_path = File.join(data_dir, filename)
+          File.write(file_path, code)
+          file_path
+        end
+      end
+
+      after do
+        FileUtils.rm_rf(temp_dir)
+      end
+
+      it 'saves validated file to session when save: true' do
+        result = described_class.call(
+          language: 'python',
+          code: 'print("Hello, World!")',
+          session_id: session_id,
+          save: true,
+          filename: 'test_script'
+        )
+
+        expect(result.to_h[:isError]).to be false
+        expect(result.to_h[:content].first[:text]).to include('(saved to')
+
+        saved_file = File.join(temp_dir, 'data', 'test_script.py')
+        expect(File.exist?(saved_file)).to be true
+        expect(File.read(saved_file)).to eq('print("Hello, World!")')
+      end
+
+      it 'uses default filename when none provided' do
+        result = described_class.call(
+          language: 'ruby',
+          code: 'puts "Hello"',
+          session_id: session_id,
+          save: true
+        )
+
+        expect(result.to_h[:isError]).to be false
+        saved_file = File.join(temp_dir, 'data', 'main.rb')
+        expect(File.exist?(saved_file)).to be true
+      end
+
+      it 'adds extension if not present in filename' do
+        result = described_class.call(
+          language: 'javascript',
+          code: 'console.log("test")',
+          session_id: session_id,
+          save: true,
+          filename: 'script'
+        )
+
+        expect(result.to_h[:isError]).to be false
+        saved_file = File.join(temp_dir, 'data', 'script.js')
+        expect(File.exist?(saved_file)).to be true
+      end
+
+      it 'creates session if it does not exist' do
+        allow(CodeSandboxMcp::SessionManager.instance).to receive(:save_code_to_session)
+          .with(session_id, 'python', 'print("test")', nil)
+          .and_return(File.join(temp_dir, 'data', 'main.py'))
+
+        result = described_class.call(
+          language: 'python',
+          code: 'print("test")',
+          session_id: session_id,
+          save: true
+        )
+
+        expect(result.to_h[:isError]).to be false
+        expect(CodeSandboxMcp::SessionManager.instance).to have_received(:save_code_to_session)
+          .with(session_id, 'python', 'print("test")', nil)
+      end
+    end
   end
 
   describe 'tool metadata' do

@@ -112,6 +112,45 @@ RSpec.describe CodeSandboxMcp::SessionManager do
       expect(result2.output).to eq('{"test": 123}')
     end
 
+    it 'executes code with custom filename' do
+      session_id = session_manager.create_session
+
+      result = session_manager.execute_in_session(
+        session_id, 'python', 'print("Custom filename test")', executor, filename: 'custom_script.py'
+      )
+
+      expect(result.exit_code).to eq(0)
+      expect(result.output).to include('Custom filename test')
+    end
+
+    it 'saves code to file when save: true and filename provided' do
+      session_id = session_manager.create_session
+      session = session_manager.get_session(session_id)
+
+      result = session_manager.execute_in_session(
+        session_id, 'python', 'print("Saved file test")', executor,
+        filename: 'saved_script.py', save: true
+      )
+
+      expect(result.exit_code).to eq(0)
+      expect(result).to respond_to(:saved_path)
+
+      saved_file = File.join(session[:directory], 'data', 'saved_script.py')
+      expect(File.exist?(saved_file)).to be true
+      expect(File.read(saved_file)).to eq('print("Saved file test")')
+    end
+
+    it 'does not save code when filename not provided' do
+      session_id = session_manager.create_session
+
+      result = session_manager.execute_in_session(
+        session_id, 'python', 'print("No save test")', executor, save: true
+      )
+
+      expect(result.exit_code).to eq(0)
+      expect(result).not_to respond_to(:saved_path)
+    end
+
     it 'isolates sessions from each other' do
       session1 = session_manager.create_session
       session2 = session_manager.create_session
@@ -179,6 +218,70 @@ RSpec.describe CodeSandboxMcp::SessionManager do
         session_id, 'javascript', 'console.log(multiply(3, 4))', executor
       )
       expect(result.output).to eq('12')
+    end
+
+    it 'works with languages that do not support history (like Bash)' do
+      session_id = session_manager.create_session
+
+      # First execution
+      result1 = session_manager.execute_in_session(
+        session_id, 'bash', 'echo "first"', executor
+      )
+      expect(result1.exit_code).to eq(0)
+
+      # Second execution (should not include history)
+      result2 = session_manager.execute_in_session(
+        session_id, 'bash', 'echo "second"', executor
+      )
+      expect(result2.exit_code).to eq(0)
+      expect(result2.output).to eq('second')
+    end
+
+    it 'works with non-history languages - no history file exists (line 207)' do
+      session_id = session_manager.create_session
+
+      result = session_manager.execute_in_session(
+        session_id, 'java', 'public class Hello { public static void main(String[] args) { System.out.println("Hello Java"); } }', executor
+      )
+      expect(result.exit_code).to eq(0)
+      expect(result.output).to include('Hello Java')
+    end
+
+    it 'works with non-history languages with existing history - hits line 207' do
+      session_id = session_manager.create_session
+      session = session_manager.get_session(session_id)
+
+      history_file = File.join(session[:directory], '.session_history_java')
+      File.write(history_file, "public class Previous { }\n")
+
+      result = session_manager.execute_in_session(
+        session_id, 'java', 'public class Test { public static void main(String[] args) { System.out.println("Test"); } }', executor
+      )
+      expect(result.exit_code).to eq(0)
+      expect(result.output).to include('Test')
+    end
+
+    it 'handles Python multiline definition ending with non-space line (line 275)' do
+      session_id = session_manager.create_session
+
+      # First execution to create history
+      session_manager.execute_in_session(
+        session_id, 'python', "import os\ndef old_func():\n    pass", executor
+      )
+
+      code_with_edge_case = <<~PYTHON
+        @property
+        def new_method(self):
+            self.value = 1
+            return self.value
+        final_var = 42
+      PYTHON
+
+      result = session_manager.execute_in_session(
+        session_id, 'python', code_with_edge_case, executor
+      )
+
+      expect(result.exit_code).to eq(0)
     end
   end
 

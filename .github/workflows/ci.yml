@@ -257,21 +257,17 @@ jobs:
           ${{ needs.prepare.outputs.test-image-base }} \
           sh -c "cd /app && bundle exec bundler-audit check --update"
 
-    - name: Test examples
-      run: |
-        docker run --rm --platform ${{ matrix.platform }} \
-          -v $PWD/examples:/app/examples:ro \
-          ${{ needs.prepare.outputs.test-image-base }} \
-          /app/examples/test_examples_in_container.sh
+    # Note: Examples are tested in smoke-test job using production image
 
   smoke-test:
-    name: Smoke Test Multi-Arch Production Image on ${{ matrix.platform }}
+    name: Test Examples on Production Image ${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
     needs: [prepare, create-temp-manifests]
     permissions:
       contents: read
       packages: read
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
@@ -280,6 +276,9 @@ jobs:
             runner: ubuntu-24.04-arm
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -290,20 +289,45 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Smoke test production image on ${{ matrix.platform }}
+    - name: Pull production image for ${{ matrix.platform }}
       run: |
-        echo "Testing multi-arch production image on ${{ matrix.platform }}..."
+        echo "Pulling multi-arch production image for ${{ matrix.platform }}..."
         docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.prod-image-base }}
 
+    - name: Quick smoke test
+      run: |
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
           docker run --rm --platform ${{ matrix.platform }} -i \
           ${{ needs.prepare.outputs.prod-image-base }} 2>/dev/null)
 
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
-          echo "✅ Production image smoke test passed on ${{ matrix.platform }}"
+          echo "✅ Basic smoke test passed"
         else
-          echo "❌ Production image smoke test failed on ${{ matrix.platform }}"
+          echo "❌ Basic smoke test failed"
+          exit 1
+        fi
+
+    - name: Test all examples on production image
+      run: |
+        echo "🧪 Running comprehensive example tests (111+ tests)..."
+        if docker run --rm --platform ${{ matrix.platform }} \
+          -v $PWD/examples:/app/examples:ro \
+          -e DOCKER_IMAGE=${{ needs.prepare.outputs.prod-image-base }} \
+          ${{ needs.prepare.outputs.prod-image-base }} \
+          /app/examples/test_examples_in_container.sh; then
+          echo "✅ All example tests passed!"
+        else
+          echo "❌ Some example tests failed. Checking for partial results..."
+          echo "::group::Verbose test output for debugging"
+          docker run --rm --platform ${{ matrix.platform }} \
+            -v $PWD/examples:/app/examples:ro \
+            -e VERBOSE=true \
+            -e DOCKER_IMAGE=${{ needs.prepare.outputs.prod-image-base }} \
+            ${{ needs.prepare.outputs.prod-image-base }} \
+            /app/examples/test_examples_in_container.sh || true
+          echo "::endgroup::"
+
           exit 1
         fi
 
@@ -382,7 +406,13 @@ jobs:
           echo "### Build Results:"
           echo "- AMD64 Build: ${{ needs.build-amd64.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "- ARM64 Build: ${{ needs.build-arm64.result == 'success' && '✅ Passed' || '❌ Failed' }}"
-          echo "- Tests: ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
-          echo "- Smoke Tests: ${{ needs.smoke-test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "- Unit Tests (RSpec): ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo "- Integration Tests (111+ Examples): ${{ needs.smoke-test.result == 'success' && '✅ Passed' || '❌ Failed' }}"
           echo "- Final Tagging: ${{ needs.tag-and-push-final.result == 'success' && '✅ Passed' || '❌ Failed' }}"
+          echo ""
+          echo "### Test Coverage:"
+          echo "- Unit Tests: RSpec with 99%+ coverage"
+          echo "- Integration Tests: 111+ examples across 12 languages"
+          echo "- Multi-file applications: All 12 languages tested"
+          echo "- Security validation: All code runs in isolated containers"
         } >> $GITHUB_STEP_SUMMARY

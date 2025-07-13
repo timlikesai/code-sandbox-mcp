@@ -7,30 +7,33 @@ module CodeSandboxMcp
   module Tools
     class ValidateCode < Base
       tool_name 'validate_code'
-      description 'Validate code syntax before execution. Returns syntax errors with line numbers when available.'
+      description 'Validate code syntax without execution - fast feedback for errors, types, compilation. ' \
+                  'Returns detailed error messages with line numbers and suggestions. ' \
+                  'Supports all 12 languages with language-specific validation rules. ' \
+                  'Use before execute_code to catch issues early. Can save files to session.'
       input_schema(
         type: 'object',
         properties: {
           language: {
             type: 'string',
-            description: 'Programming language',
+            description: 'Programming language for syntax validation. Each language uses appropriate validators.',
             enum: LANGUAGES.keys
           },
           code: {
             type: 'string',
-            description: 'Code to validate'
+            description: 'Source code to validate for syntax errors, type issues, and compilation problems.'
           },
           filename: {
             type: 'string',
-            description: 'Optional filename to use for validation context'
+            description: 'Filename for validation context - affects import resolution and language-specific rules.'
           },
           save: {
             type: 'boolean',
-            description: 'Save the file to session directory after validation (default: false)'
+            description: 'Save validated file to session directory after validation for multi-file projects.'
           },
           session_id: {
             type: 'string',
-            description: 'Optional session ID for saving files'
+            description: 'Session ID for saving validated files. Links to execute_code sessions for seamless workflow.'
           }
         },
         required: %w[language code]
@@ -58,33 +61,15 @@ module CodeSandboxMcp
           message += " (saved to #{saved_path})" if saved_path
 
           content = [
-            create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language)),
-            create_content_block(message, status: 'valid')
+            create_content_block(message, status: 'valid'),
+            create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language))
           ]
           MCP::Tool::Response.new(content)
         end
 
         def save_code_to_session(session_id, language, code, filename)
           require_relative '../session_manager'
-
-          session_manager = SessionManager.instance
-          session = session_manager.get_session(session_id)
-
-          unless session
-            session_id = session_manager.create_session(session_id: session_id)
-            session = session_manager.get_session(session_id)
-          end
-
-          lang_config = LANGUAGES[language]
-          extension = lang_config[:extension]
-          filename ||= "main#{extension}"
-          filename += extension unless filename.end_with?(extension)
-
-          file_path = File.join(session[:directory], 'data', filename)
-          FileUtils.mkdir_p(File.dirname(file_path))
-          File.write(file_path, code)
-
-          file_path
+          SessionManager.instance.save_code_to_session(session_id, language, code, filename)
         end
 
         def error_response(error)
