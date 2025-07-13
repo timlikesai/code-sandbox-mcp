@@ -106,6 +106,52 @@ module CodeSandboxMcp
       @mutex.synchronize { sessions.clear }
     end
 
+    # Clear a specific session
+    def clear_session(session_id) # rubocop:disable Naming/PredicateMethod
+      session = @mutex.synchronize { sessions.delete(session_id) }
+      return false unless session
+
+      FileUtils.rm_rf(session[:directory])
+      true
+    end
+
+    # List active sessions
+    def list_sessions
+      # Clean up expired sessions first (outside mutex)
+      expired_ids = @mutex.synchronize { cleanup_expired_sessions }
+      expired_ids.each { |id| clear_session(id) }
+
+      @mutex.synchronize do
+        sessions.map do |id, session|
+          {
+            id: id,
+            created_at: session[:created_at].iso8601,
+            last_accessed: session[:last_accessed].iso8601,
+            execution_count: session[:execution_count],
+            expired: session_expired?(session)
+          }
+        end
+      end
+    end
+
+    # Save code to session directory
+    def save_code_to_session(session_id, language, code, filename)
+      session = get_or_create_session(session_id)
+
+      lang_config = LANGUAGES[language]
+      extension = lang_config[:extension]
+      filename ||= "main#{extension}"
+      filename += extension unless filename.end_with?(extension)
+
+      data_dir = File.join(session[:directory], 'data')
+      FileUtils.mkdir_p(data_dir)
+
+      file_path = File.join(data_dir, filename)
+      File.write(file_path, code)
+
+      file_path
+    end
+
     private
 
     def save_code_if_requested(session_id, language, code, filename, save)
@@ -156,52 +202,6 @@ module CodeSandboxMcp
       return unless ENV['RUNNER_DEBUG'] == '1' || ENV['VERBOSE'] == 'true'
 
       puts "[SESSION] #{message}"
-    end
-
-    # Clear a specific session
-    def clear_session(session_id) # rubocop:disable Naming/PredicateMethod
-      session = @mutex.synchronize { sessions.delete(session_id) }
-      return false unless session
-
-      FileUtils.rm_rf(session[:directory])
-      true
-    end
-
-    # List active sessions
-    def list_sessions
-      # Clean up expired sessions first (outside mutex)
-      expired_ids = @mutex.synchronize { cleanup_expired_sessions }
-      expired_ids.each { |id| clear_session(id) }
-
-      @mutex.synchronize do
-        sessions.map do |id, session|
-          {
-            id: id,
-            created_at: session[:created_at].iso8601,
-            last_accessed: session[:last_accessed].iso8601,
-            execution_count: session[:execution_count],
-            expired: session_expired?(session)
-          }
-        end
-      end
-    end
-
-    # Save code to session directory
-    def save_code_to_session(session_id, language, code, filename)
-      session = get_or_create_session(session_id)
-
-      lang_config = LANGUAGES[language]
-      extension = lang_config[:extension]
-      filename ||= "main#{extension}"
-      filename += extension unless filename.end_with?(extension)
-
-      data_dir = File.join(session[:directory], 'data')
-      FileUtils.mkdir_p(data_dir)
-
-      file_path = File.join(data_dir, filename)
-      File.write(file_path, code)
-
-      file_path
     end
 
     def generate_session_id

@@ -237,7 +237,7 @@ RSpec.describe CodeSandboxMcp::SessionManager do
       expect(result2.output).to eq('second')
     end
 
-    it 'works with non-history languages - no history file exists (line 207)' do
+    it 'works with non-history languages - no history file exists' do
       session_id = session_manager.create_session
 
       result = session_manager.execute_in_session(
@@ -247,7 +247,7 @@ RSpec.describe CodeSandboxMcp::SessionManager do
       expect(result.output).to include('Hello Java')
     end
 
-    it 'works with non-history languages with existing history - hits line 207' do
+    it 'works with non-history languages with existing history' do
       session_id = session_manager.create_session
       session = session_manager.get_session(session_id)
 

@@ -11,7 +11,7 @@ module CodeSandboxMcp
     ExecutionResult = Struct.new(:output, :error, :exit_code, :execution_time, keyword_init: true)
 
     def execute(language, code)
-      debug_log("🚀 Executing #{language} code (#{code.length} chars)")
+      debug_log("🚀 Executing #{language} code (#{code&.length || 0} chars)")
       lang_config = validate_language!(language)
 
       Dir.mktmpdir("code-sandbox-#{SecureRandom.hex(8)}") do |temp_dir|

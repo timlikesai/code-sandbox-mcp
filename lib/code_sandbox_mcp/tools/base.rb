@@ -24,7 +24,7 @@ module CodeSandboxMcp
         }
       end
 
-      private_class_method def self.create_content_block(text, annotations = {})
+      def self.create_content_block(text, annotations = {})
         {
           type: 'text',
           text: text,
@@ -32,7 +32,7 @@ module CodeSandboxMcp
         }.compact
       end
 
-      private_class_method def self.create_error_response(message)
+      def self.create_error_response(message)
         MCP::Tool::Response.new(
           [create_content_block(message)],
           true

@@ -25,7 +25,6 @@ RSpec.describe CodeSandboxMcp::Executor do
       end
 
       it 'executes TypeScript code' do
-        skip 'TypeScript not installed' unless command_available?('tsx') || command_available?('ts-node')
 
         result = executor.execute('typescript', 'console.log("Hello" as string)')
         expect_successful_execution(result, 'Hello')
@@ -47,49 +46,41 @@ RSpec.describe CodeSandboxMcp::Executor do
       end
 
       it 'executes Zsh code' do
-        skip 'Zsh not installed' unless command_available?('zsh')
 
         result = executor.execute('zsh', 'echo "Hello, Zsh!"')
         expect_successful_execution(result, 'Hello, Zsh!')
       end
 
       it 'executes Fish code' do
-        skip 'Fish not installed' unless command_available?('fish')
 
         result = executor.execute('fish', 'echo "Hello, Fish!"')
         expect_successful_execution(result, 'Hello, Fish!')
       end
 
       it 'executes Java code' do
-        skip 'Java not installed' unless command_available?('java')
-
         result = executor.execute('java', 'public class main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }')
         expect_successful_execution(result, 'Hello, Java!')
       end
 
       it 'executes Clojure code' do
-        skip 'Clojure not installed' unless command_available?('clojure')
 
         result = executor.execute('clojure', '(println "Hello, Clojure!")')
         expect_successful_execution(result, 'Hello, Clojure!')
       end
 
       it 'executes Kotlin code' do
-        skip 'Kotlin not installed' unless command_available?('kotlin')
 
         result = executor.execute('kotlin', 'println("Hello, Kotlin!")')
         expect_successful_execution(result, 'Hello, Kotlin!')
       end
 
       it 'executes Groovy code' do
-        skip 'Groovy not installed' unless command_available?('groovy')
 
         result = executor.execute('groovy', 'println "Hello, Groovy!"')
         expect_successful_execution(result, 'Hello, Groovy!')
       end
 
       it 'executes Scala code' do
-        skip 'Scala not installed' unless command_available?('scala')
 
         result = executor.execute('scala', '@main def hello() = println("Hello, Scala!")')
         expect_successful_execution(result, 'Hello, Scala!')
