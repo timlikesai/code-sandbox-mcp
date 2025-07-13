@@ -25,7 +25,6 @@ RSpec.describe CodeSandboxMcp::Executor do
       end
 
       it 'executes TypeScript code' do
-
         result = executor.execute('typescript', 'console.log("Hello" as string)')
         expect_successful_execution(result, 'Hello')
       end
@@ -46,13 +45,11 @@ RSpec.describe CodeSandboxMcp::Executor do
       end
 
       it 'executes Zsh code' do
-
         result = executor.execute('zsh', 'echo "Hello, Zsh!"')
         expect_successful_execution(result, 'Hello, Zsh!')
       end
 
       it 'executes Fish code' do
-
         result = executor.execute('fish', 'echo "Hello, Fish!"')
         expect_successful_execution(result, 'Hello, Fish!')
       end
@@ -63,25 +60,21 @@ RSpec.describe CodeSandboxMcp::Executor do
       end
 
       it 'executes Clojure code' do
-
         result = executor.execute('clojure', '(println "Hello, Clojure!")')
         expect_successful_execution(result, 'Hello, Clojure!')
       end
 
       it 'executes Kotlin code' do
-
         result = executor.execute('kotlin', 'println("Hello, Kotlin!")')
         expect_successful_execution(result, 'Hello, Kotlin!')
       end
 
       it 'executes Groovy code' do
-
         result = executor.execute('groovy', 'println "Hello, Groovy!"')
         expect_successful_execution(result, 'Hello, Groovy!')
       end
 
       it 'executes Scala code' do
-
         result = executor.execute('scala', '@main def hello() = println("Hello, Scala!")')
         expect_successful_execution(result, 'Hello, Scala!')
       end
