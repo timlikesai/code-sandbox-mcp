@@ -57,6 +57,26 @@ RSpec.configure do |config|
   config.warnings = true
   config.disable_monkey_patching!
 
+  # Enable verbose logging when RUNNER_DEBUG=1
+  if ENV['RUNNER_DEBUG'] == '1'
+    config.formatter = :documentation
+    config.color = true
+    config.tty = true
+
+    config.before(:each) do |example|
+      puts "\n🧪 Starting: #{example.full_description}"
+    end
+
+    config.after(:each) do |example|
+      status = example.exception ? '❌ FAILED' : '✅ PASSED'
+      puts "#{status}: #{example.full_description}"
+      if example.exception
+        puts "Error: #{example.exception.message}"
+        puts example.exception.backtrace.first(5).join("\n")
+      end
+    end
+  end
+
   config.after do
     Timecop.return
   end

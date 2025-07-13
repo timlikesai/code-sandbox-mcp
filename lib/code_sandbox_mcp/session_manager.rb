@@ -91,11 +91,19 @@ module CodeSandboxMcp
 
     # Execute code in a session context
     def execute_in_session(session_id, language, code, executor, options = {})
+      debug_log("🎯 Session execution: #{session_id} (#{language})")
       session = setup_session_for_execution(session_id)
       saved_path, history_file, prepared_code = prepare_execution_context(session_id, language, code, options)
 
       result = execute_code_in_session(executor, language, prepared_code, session[:directory], options[:filename])
       finalize_execution(result, history_file, code, language, saved_path)
+    end
+
+    # Clear all sessions
+    def clear_all_sessions
+      session_ids = @mutex.synchronize { sessions.keys }
+      session_ids.each { |id| clear_session(id) }
+      @mutex.synchronize { sessions.clear }
     end
 
     private
@@ -144,6 +152,12 @@ module CodeSandboxMcp
       result
     end
 
+    def debug_log(message)
+      return unless ENV['RUNNER_DEBUG'] == '1' || ENV['VERBOSE'] == 'true'
+
+      puts "[SESSION] #{message}"
+    end
+
     # Clear a specific session
     def clear_session(session_id) # rubocop:disable Naming/PredicateMethod
       session = @mutex.synchronize { sessions.delete(session_id) }
@@ -151,13 +165,6 @@ module CodeSandboxMcp
 
       FileUtils.rm_rf(session[:directory])
       true
-    end
-
-    # Clear all sessions
-    def clear_all_sessions
-      session_ids = @mutex.synchronize { sessions.keys }
-      session_ids.each { |id| clear_session(id) }
-      @mutex.synchronize { sessions.clear }
     end
 
     # List active sessions

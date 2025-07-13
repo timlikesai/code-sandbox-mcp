@@ -71,6 +71,24 @@ module CodeSandboxMcp
         violations
       end
 
+      def validate_network_enabled_execution(code, language)
+        violations = scan_code(code, language)
+
+        if violations.any?
+          {
+            allowed: false,
+            violations: violations,
+            recommendation: 'Consider using --network none for security'
+          }
+        else
+          {
+            allowed: true,
+            violations: [],
+            recommendation: 'Code appears safe for network execution'
+          }
+        end
+      end
+
       private
 
       def check_network_connections
@@ -104,24 +122,6 @@ module CodeSandboxMcp
       rescue StandardError
         # ps might not be available - skip this check
         []
-      end
-
-      def validate_network_enabled_execution(code, language)
-        violations = scan_code(code, language)
-
-        if violations.any?
-          {
-            allowed: false,
-            violations: violations,
-            recommendation: 'Consider using --network none for security'
-          }
-        else
-          {
-            allowed: true,
-            violations: [],
-            recommendation: 'Code appears safe for network execution'
-          }
-        end
       end
 
       def find_line_number(code, char_offset)

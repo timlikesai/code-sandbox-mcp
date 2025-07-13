@@ -225,6 +225,7 @@ jobs:
       run: |
         docker run --rm --platform ${{ matrix.platform }} \
           -e COVERAGE=true -e COVERAGE_DIR=/tmp/coverage \
+          -e RUNNER_DEBUG=${{ runner.debug && '1' || '0' }} \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec rspec"
 
@@ -297,6 +298,7 @@ jobs:
         if docker run --rm --platform ${{ matrix.platform }} \
           -v $PWD/examples:/app/examples:ro \
           -e DOCKER_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          -e VERBOSE=${{ runner.debug && 'true' || 'false' }} \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
           /app/examples/test_examples_in_container.sh; then
           echo "✅ All example tests passed!"
