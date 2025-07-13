@@ -31,7 +31,7 @@ module CodeSandboxMcp
           reset_session: {
             type: 'boolean',
             description: 'Reset the session before executing (default: false)'
-          }
+          },
         },
         required: %w[language code]
       )
@@ -78,13 +78,14 @@ module CodeSandboxMcp
           lines.join("\n")
         end
 
+        def executor
+          @executor ||= Executor.new
+        end
+
         def session_manager
           SessionManager.instance
         end
 
-        def executor
-          @executor ||= Executor.new
-        end
       end
     end
   end
