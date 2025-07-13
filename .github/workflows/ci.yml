@@ -14,26 +14,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  prepare:
-    name: Prepare Build Variables
-    runs-on: ubuntu-24.04
-    outputs:
-      safe-tag: ${{ steps.vars.outputs.SAFE_TAG }}
-      test-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
-      prod-image-base: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-    steps:
-    - name: Sanitize branch name for Docker tags
-      id: vars
-      run: |
-        BRANCH_NAME="${{ github.head_ref && github.head_ref || github.ref_name }}"
-        SAFE_TAG=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-        echo "SAFE_TAG=$SAFE_TAG" >> $GITHUB_OUTPUT
 
   build-amd64:
     name: Build AMD64 Images
     runs-on: ubuntu-24.04
-    needs: prepare
     permissions:
       contents: read
       packages: write
@@ -59,9 +43,9 @@ jobs:
         target: test
         platforms: linux/amd64
         tags: |
-          ${{ needs.prepare.outputs.test-image-base }}-amd64
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-amd64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
@@ -75,11 +59,11 @@ jobs:
         target: production
         platforms: linux/amd64
         tags: |
-          ${{ needs.prepare.outputs.prod-image-base }}-amd64
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
         cache-to: type=inline
         push: true
@@ -87,7 +71,6 @@ jobs:
   build-arm64:
     name: Build ARM64 Images
     runs-on: ubuntu-24.04-arm
-    needs: prepare
     permissions:
       contents: read
       packages: write
@@ -113,9 +96,9 @@ jobs:
         target: test
         platforms: linux/arm64
         tags: |
-          ${{ needs.prepare.outputs.test-image-base }}-arm64
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-arm64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
@@ -129,11 +112,11 @@ jobs:
         target: production
         platforms: linux/arm64
         tags: |
-          ${{ needs.prepare.outputs.prod-image-base }}-arm64
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }}
           type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
         cache-to: type=inline
         push: true
@@ -141,7 +124,7 @@ jobs:
   create-temp-manifests:
     name: Create Temporary Multi-Arch Manifests
     runs-on: ubuntu-24.04
-    needs: [prepare, build-amd64, build-arm64]
+    needs: [build-amd64, build-arm64]
     permissions:
       contents: read
       packages: write
@@ -160,35 +143,35 @@ jobs:
     - name: Verify architecture-specific images exist
       run: |
         echo "Checking if architecture-specific images are available..."
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}-amd64
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}-arm64
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}-amd64
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}-arm64
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-amd64
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-arm64
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
 
     - name: Create temporary test image manifest
       run: |
         echo "Creating multi-arch test manifest..."
-        docker buildx imagetools create -t ${{ needs.prepare.outputs.test-image-base }} \
-          ${{ needs.prepare.outputs.test-image-base }}-amd64 \
-          ${{ needs.prepare.outputs.test-image-base }}-arm64
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-amd64 \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}-arm64
 
         echo "Verifying test manifest..."
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }}
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
 
     - name: Create temporary production image manifest
       run: |
         echo "Creating multi-arch production manifest..."
-        docker buildx imagetools create -t ${{ needs.prepare.outputs.prod-image-base }} \
-          ${{ needs.prepare.outputs.prod-image-base }}-amd64 \
-          ${{ needs.prepare.outputs.prod-image-base }}-arm64
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-amd64 \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}-arm64
 
         echo "Verifying production manifest..."
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.prod-image-base }}
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   test:
     name: Test Multi-Arch Image on ${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
-    needs: [prepare, create-temp-manifests]
+    needs: [create-temp-manifests]
     permissions:
       contents: read
       packages: read
@@ -218,18 +201,18 @@ jobs:
     - name: Pull test image for ${{ matrix.platform }}
       run: |
         echo "Pulling multi-arch test image for ${{ matrix.platform }}..."
-        echo "Image: ${{ needs.prepare.outputs.test-image-base }}"
+        echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}"
 
         # First, check if the manifest exists
-        docker buildx imagetools inspect ${{ needs.prepare.outputs.test-image-base }} || {
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} || {
           echo "ERROR: Multi-arch manifest not found!"
-          echo "Expected image: ${{ needs.prepare.outputs.test-image-base }}"
+          echo "Expected image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}"
           exit 1
         }
 
         # Pull the specific platform variant with retry
         for i in 1 2 3; do
-          if docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.test-image-base }}; then
+          if docker pull --platform ${{ matrix.platform }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}; then
             echo "Successfully pulled image on attempt $i"
             break
           else
@@ -242,19 +225,19 @@ jobs:
       run: |
         docker run --rm --platform ${{ matrix.platform }} \
           -e COVERAGE=true -e COVERAGE_DIR=/tmp/coverage \
-          ${{ needs.prepare.outputs.test-image-base }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec rspec"
 
     - name: Run RuboCop
       run: |
         docker run --rm --platform ${{ matrix.platform }} \
-          ${{ needs.prepare.outputs.test-image-base }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec rubocop"
 
     - name: Run bundler-audit
       run: |
         docker run --rm --platform ${{ matrix.platform }} \
-          ${{ needs.prepare.outputs.test-image-base }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }} \
           sh -c "cd /app && bundle exec bundler-audit check --update"
 
     # Note: Examples are tested in smoke-test job using production image
@@ -262,7 +245,7 @@ jobs:
   smoke-test:
     name: Test Examples on Production Image ${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
-    needs: [prepare, create-temp-manifests]
+    needs: [create-temp-manifests]
     permissions:
       contents: read
       packages: read
@@ -292,13 +275,13 @@ jobs:
     - name: Pull production image for ${{ matrix.platform }}
       run: |
         echo "Pulling multi-arch production image for ${{ matrix.platform }}..."
-        docker pull --platform ${{ matrix.platform }} ${{ needs.prepare.outputs.prod-image-base }}
+        docker pull --platform ${{ matrix.platform }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
     - name: Quick smoke test
       run: |
         RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
           docker run --rm --platform ${{ matrix.platform }} -i \
-          ${{ needs.prepare.outputs.prod-image-base }} 2>/dev/null)
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
 
         echo "Response: $RESPONSE"
         if echo "$RESPONSE" | grep -q "protocolVersion"; then
@@ -313,8 +296,8 @@ jobs:
         echo "🧪 Running comprehensive example tests (111+ tests)..."
         if docker run --rm --platform ${{ matrix.platform }} \
           -v $PWD/examples:/app/examples:ro \
-          -e DOCKER_IMAGE=${{ needs.prepare.outputs.prod-image-base }} \
-          ${{ needs.prepare.outputs.prod-image-base }} \
+          -e DOCKER_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
           /app/examples/test_examples_in_container.sh; then
           echo "✅ All example tests passed!"
         else
@@ -323,8 +306,8 @@ jobs:
           docker run --rm --platform ${{ matrix.platform }} \
             -v $PWD/examples:/app/examples:ro \
             -e VERBOSE=true \
-            -e DOCKER_IMAGE=${{ needs.prepare.outputs.prod-image-base }} \
-            ${{ needs.prepare.outputs.prod-image-base }} \
+            -e DOCKER_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             /app/examples/test_examples_in_container.sh || true
           echo "::endgroup::"
 
@@ -334,7 +317,7 @@ jobs:
   tag-and-push-final:
     name: Tag and Push Final Images
     runs-on: ubuntu-24.04
-    needs: [prepare, test, smoke-test]
+    needs: [test, smoke-test]
     permissions:
       contents: read
       packages: write
@@ -353,31 +336,31 @@ jobs:
     - name: Create final test image tags
       run: |
         # Tag the temporary multi-arch manifest with the branch tag
-        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }} \
-          ${{ needs.prepare.outputs.test-image-base }}
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
 
     - name: Create final production image tags
       run: |
         # Tag the temporary multi-arch manifest with the branch tag
-        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }} \
-          ${{ needs.prepare.outputs.prod-image-base }}
+        docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }} \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
     - name: Create and push latest tag (main branch only)
       if: github.ref == 'refs/heads/main'
       run: |
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-          ${{ needs.prepare.outputs.prod-image-base }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main \
-          ${{ needs.prepare.outputs.test-image-base }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}
 
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
-          ${{ needs.prepare.outputs.prod-image-base }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   summary:
     name: Build Summary
     runs-on: ubuntu-24.04
-    needs: [prepare, build-amd64, build-arm64, test, smoke-test, tag-and-push-final]
+    needs: [build-amd64, build-arm64, test, smoke-test, tag-and-push-final]
     if: always()
 
     steps:
@@ -389,15 +372,15 @@ jobs:
           echo "### Multi-Arch Images (linux/amd64, linux/arm64):"
           echo ""
           echo "#### Test Images:"
-          echo "- \`${{ needs.prepare.outputs.test-image-base }}\` (SHA)"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}\` (branch)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.sha }}\` (SHA)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }}\` (branch)"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main\`"
           fi
           echo ""
           echo "#### Production Images:"
-          echo "- \`${{ needs.prepare.outputs.prod-image-base }}\` (SHA)"
-          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}\` (branch)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\` (SHA)"
+          echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }}\` (branch)"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main\`"
             echo "- \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest\`"
