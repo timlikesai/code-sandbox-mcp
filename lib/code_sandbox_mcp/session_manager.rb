@@ -93,20 +93,31 @@ module CodeSandboxMcp
     end
 
     # Execute code in a session context
-    def execute_in_session(session_id, language, code, executor)
+    def execute_in_session(session_id, language, code, executor, filename: nil, save: false)
       session = get_or_create_session(session_id)
 
       @mutex.synchronize do
         session[:execution_count] += 1
       end
 
+      saved_path = nil
+      saved_path = save_code_to_session(session_id, language, code, filename) if save && filename
+
       history_file = File.join(session[:directory], ".session_history_#{language}")
 
       prepared_code = prepare_code_with_history(language, code, history_file)
 
-      result = executor.execute_with_dir(language, prepared_code, session[:directory])
+      # Use custom filename if provided
+      result = if filename
+                 execute_with_custom_filename(executor, language, prepared_code, session[:directory], filename)
+               else
+                 executor.execute_with_dir(language, prepared_code, session[:directory])
+               end
 
       append_to_history(history_file, code, language) if result.exit_code.zero?
+
+      # Add saved_path to result if file was saved
+      result.define_singleton_method(:saved_path) { saved_path } if saved_path
 
       result
     end
@@ -315,6 +326,34 @@ module CodeSandboxMcp
         line.start_with?('require ', 'require_relative ') ||
         line =~ /^\s*[A-Z]\w*\s*=/ ||
         line =~ /^\s*@\w+\s*=/
+    end
+
+    def save_code_to_session(session_id, language, code, filename)
+      session = get_or_create_session(session_id)
+
+      lang_config = LANGUAGES[language]
+      extension = lang_config[:extension]
+      filename ||= "main#{extension}"
+      filename += extension unless filename.end_with?(extension)
+
+      data_dir = File.join(session[:directory], 'data')
+      FileUtils.mkdir_p(data_dir)
+
+      file_path = File.join(data_dir, filename)
+      File.write(file_path, code)
+
+      file_path
+    end
+
+    def execute_with_custom_filename(executor, language, code, working_dir, filename)
+      lang_config = LANGUAGES[language]
+      extension = lang_config[:extension]
+      filename += extension unless filename.end_with?(extension)
+
+      file_path = File.join(working_dir, filename)
+      File.write(file_path, code)
+
+      executor.execute_command(lang_config[:command], file_path, working_dir)
     end
   end
 end

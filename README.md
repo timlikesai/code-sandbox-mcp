@@ -128,11 +128,19 @@ For additional security hardening:
 - Package installation (`pip install`, `npm install`)
 - Data downloading or web scraping
 - External service integration
+- Installing libraries for data science, web frameworks, etc.
+
+**Container-Level Package Security**:
+- ✅ **Ephemeral Installs**: Packages install within the container's temporary filesystem
+- ✅ **No Host Persistence**: Nothing survives container restart
+- ✅ **Session Sharing**: Installed packages available across all languages in the same container session
+- ✅ **Clean Slate**: Each new container starts fresh with no previous installations
+- ✅ **Resource Bounded**: All installs subject to container memory/disk limits
 
 **Docker Network Security**:
-- `--network none`: Complete network isolation (recommended)
-- No `--network` flag: Full network access (use with caution)
-- The container itself has no network restrictions - this is controlled entirely by Docker flags
+- `--network none`: Complete network isolation (recommended for untrusted code)
+- No `--network` flag: Full network access (safe for development/experimentation)
+- The container provides strong isolation boundaries regardless of network settings
 
 
 ## Usage
@@ -156,11 +164,11 @@ Sessions expire after 1 hour of inactivity.
 ### Quick Test
 
 ```bash
-# Test execution (with network disabled for security)
+# Test execution (with network disabled)
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"print(\"Hello World!\")"}}}' | docker run --rm -i --network none ghcr.io/timlikesai/code-sandbox-mcp:latest
 
-# Test with network access (if needed)
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"import urllib.request; print(urllib.request.urlopen('https://httpbin.org/ip').read())"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
+# Test with network access and package installation
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"import subprocess; subprocess.run([\"pip\", \"install\", \"requests\"]); import requests; print(requests.get(\"https://httpbin.org/ip\").json())"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 
 # Debug mode
 docker run --rm -it --network none ghcr.io/timlikesai/code-sandbox-mcp:latest bash
@@ -170,14 +178,16 @@ docker run --rm -it --network none ghcr.io/timlikesai/code-sandbox-mcp:latest ba
 
 Multiple layers of container security:
 - **Container Isolation** with resource limits (512MB memory, 0.5 CPU)
-- **Network Isolation** (via Docker's `--network none` flag - recommended)
-- **Read-only Filesystem** with writable `/tmp` only  
+- **Ephemeral Filesystem** - nothing persists after container stops
+- **Package Installation Safety** - packages install in container temp space only
+- **Network Isolation** (configurable via Docker's `--network none` flag)
+- **Read-only Root Filesystem** with writable `/tmp` only  
 - **No Privileges** (`--security-opt no-new-privileges`, `--cap-drop ALL`)
 - **Non-root User** (executes as `sandbox` user)
 - **Auto-cleanup** (`--rm` removes containers after execution)
 - **Configurable Timeout** (default 30s via `EXECUTION_TIMEOUT`)
 
-**Network Security**: The container supports networking, but we recommend using Docker's `--network none` flag to disable it. See the configuration section for details.
+**Package Installation Security**: When network access is enabled, users can install packages (`pip install`, `npm install`, etc.) safely within the container. All installations are ephemeral and don't affect the host system or persist between container restarts.
 
 ## Examples
 
