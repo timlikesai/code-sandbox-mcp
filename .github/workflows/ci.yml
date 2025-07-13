@@ -61,9 +61,9 @@ jobs:
         tags: |
           ${{ needs.prepare.outputs.test-image-base }}-amd64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-amd64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-amd64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-amd64
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
         pull: true
         push: true
@@ -77,10 +77,10 @@ jobs:
         tags: |
           ${{ needs.prepare.outputs.prod-image-base }}-amd64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-amd64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-amd64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-amd64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-amd64
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
         cache-to: type=inline
         push: true
 
@@ -115,9 +115,9 @@ jobs:
         tags: |
           ${{ needs.prepare.outputs.test-image-base }}-arm64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-arm64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-arm64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-arm64
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
         cache-to: type=inline
         pull: true
         push: true
@@ -131,10 +131,10 @@ jobs:
         tags: |
           ${{ needs.prepare.outputs.prod-image-base }}-arm64
         cache-from: |
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}-arm64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-arm64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}-arm64
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main-arm64
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ needs.prepare.outputs.safe-tag }}
+          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main
         cache-to: type=inline
         push: true
 
