@@ -48,8 +48,12 @@ module CodeSandboxMcp
       )
 
       class << self
-        def call(language:, code:, session_id: nil, reset_session: false, filename: nil, save: false)
-          session_id ||= "default-#{language}"
+        def call(language:, code:, **options)
+          session_id = options[:session_id] || "default-#{language}"
+          reset_session = options[:reset_session] || false
+          filename = options[:filename]
+          save = options[:save] || false
+
           session_manager.clear_session(session_id) if reset_session
 
           result = execute_in_session(session_id, language, code, filename, save)

@@ -66,37 +66,44 @@ module CodeSandboxMcp
 
       def check_resource_usage
         violations = []
-
-        # Check network connections
-        begin
-          netstat_output = `netstat -an 2>/dev/null | grep ESTABLISHED | wc -l`.strip.to_i
-          if netstat_output > RESOURCE_LIMITS[:max_network_connections]
-            violations << SecurityViolation.new(
-              :excessive_network_connections,
-              "#{netstat_output} connections (max: #{RESOURCE_LIMITS[:max_network_connections]})"
-            )
-          end
-        rescue StandardError
-          # netstat might not be available - skip this check
-        end
-
-        # Check memory usage
-        begin
-          pid = Process.pid
-          memory_kb = `ps -o rss= -p #{pid}`.strip.to_i
-          memory_mb = memory_kb / 1024
-
-          if memory_mb > RESOURCE_LIMITS[:max_memory_mb]
-            violations << SecurityViolation.new(
-              :excessive_memory_usage,
-              "#{memory_mb}MB used (max: #{RESOURCE_LIMITS[:max_memory_mb]}MB)"
-            )
-          end
-        rescue StandardError
-          # ps might not be available - skip this check
-        end
-
+        violations.concat(check_network_connections)
+        violations.concat(check_memory_usage)
         violations
+      end
+
+      private
+
+      def check_network_connections
+        violations = []
+        netstat_output = `netstat -an 2>/dev/null | grep ESTABLISHED | wc -l`.strip.to_i
+        if netstat_output > RESOURCE_LIMITS[:max_network_connections]
+          violations << SecurityViolation.new(
+            :excessive_network_connections,
+            "#{netstat_output} connections (max: #{RESOURCE_LIMITS[:max_network_connections]})"
+          )
+        end
+        violations
+      rescue StandardError
+        # netstat might not be available - skip this check
+        []
+      end
+
+      def check_memory_usage
+        violations = []
+        pid = Process.pid
+        memory_kb = `ps -o rss= -p #{pid}`.strip.to_i
+        memory_mb = memory_kb / 1024
+
+        if memory_mb > RESOURCE_LIMITS[:max_memory_mb]
+          violations << SecurityViolation.new(
+            :excessive_memory_usage,
+            "#{memory_mb}MB used (max: #{RESOURCE_LIMITS[:max_memory_mb]}MB)"
+          )
+        end
+        violations
+      rescue StandardError
+        # ps might not be available - skip this check
+        []
       end
 
       def validate_network_enabled_execution(code, language)
@@ -116,8 +123,6 @@ module CodeSandboxMcp
           }
         end
       end
-
-      private
 
       def find_line_number(code, char_offset)
         code[0, char_offset].count("\n") + 1

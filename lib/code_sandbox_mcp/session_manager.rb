@@ -90,32 +90,57 @@ module CodeSandboxMcp
     end
 
     # Execute code in a session context
-    def execute_in_session(session_id, language, code, executor, filename: nil, save: false)
-      session = get_or_create_session(session_id)
+    def execute_in_session(session_id, language, code, executor, options = {})
+      session = setup_session_for_execution(session_id)
+      saved_path, history_file, prepared_code = prepare_execution_context(session_id, language, code, options)
 
+      result = execute_code_in_session(executor, language, prepared_code, session[:directory], options[:filename])
+      finalize_execution(result, history_file, code, language, saved_path)
+    end
+
+    private
+
+    def save_code_if_requested(session_id, language, code, filename, save)
+      return nil unless save && filename
+
+      save_code_to_session(session_id, language, code, filename)
+    end
+
+    def execute_code_in_session(executor, language, prepared_code, directory, filename)
+      if filename
+        execute_with_custom_filename(executor, language, prepared_code, directory, filename)
+      else
+        executor.execute_with_dir(language, prepared_code, directory)
+      end
+    end
+
+    def add_saved_path_to_result(result, saved_path)
+      result.define_singleton_method(:saved_path) { saved_path }
+    end
+
+    def setup_session_for_execution(session_id)
+      session = get_or_create_session(session_id)
       @mutex.synchronize do
         session[:execution_count] += 1
       end
+      session
+    end
 
-      saved_path = nil
-      saved_path = save_code_to_session(session_id, language, code, filename) if save && filename
+    def prepare_execution_context(session_id, language, code, options)
+      filename = options[:filename]
+      save = options[:save] || false
 
+      saved_path = save_code_if_requested(session_id, language, code, filename, save)
+      session = get_or_create_session(session_id)
       history_file = File.join(session[:directory], ".session_history_#{language}")
-
       prepared_code = prepare_code_with_history(language, code, history_file)
 
-      # Use custom filename if provided
-      result = if filename
-                 execute_with_custom_filename(executor, language, prepared_code, session[:directory], filename)
-               else
-                 executor.execute_with_dir(language, prepared_code, session[:directory])
-               end
+      [saved_path, history_file, prepared_code]
+    end
 
+    def finalize_execution(result, history_file, code, language, saved_path)
       append_to_history(history_file, code, language) if result.exit_code.zero?
-
-      # Add saved_path to result if file was saved
-      result.define_singleton_method(:saved_path) { saved_path } if saved_path
-
+      add_saved_path_to_result(result, saved_path) if saved_path
       result
     end
 
@@ -171,8 +196,6 @@ module CodeSandboxMcp
 
       file_path
     end
-
-    private
 
     def generate_session_id
       SecureRandom.hex(8)

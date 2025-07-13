@@ -77,12 +77,12 @@ RSpec.describe CodeSandboxMcp::Tools::ValidateCode do
         allow(CodeSandboxMcp::SessionManager.instance).to receive(:save_code_to_session) do |_session_id, language, code, filename|
           data_dir = File.join(temp_dir, 'data')
           FileUtils.mkdir_p(data_dir)
-          
+
           lang_config = CodeSandboxMcp::LANGUAGES[language]
           extension = lang_config[:extension]
           filename ||= "main#{extension}"
           filename += extension unless filename.end_with?(extension)
-          
+
           file_path = File.join(data_dir, filename)
           File.write(file_path, code)
           file_path
