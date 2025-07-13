@@ -36,6 +36,14 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Pull cache images for AMD64 builds
+      run: |
+        echo "Pulling cache images for AMD64 builds..."
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main || echo "Cache image not found, will build from scratch"
+
     - name: Build and push AMD64 test image
       uses: docker/build-push-action@v6
       with:
@@ -88,6 +96,14 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull cache images for ARM64 builds
+      run: |
+        echo "Pulling cache images for ARM64 builds..."
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-${{ github.head_ref && github.head_ref || github.ref_name }} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test-main || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.head_ref && github.head_ref || github.ref_name }} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main || echo "Cache image not found, will build from scratch"
 
     - name: Build and push ARM64 test image
       uses: docker/build-push-action@v6
