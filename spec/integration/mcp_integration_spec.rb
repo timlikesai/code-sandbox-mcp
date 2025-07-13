@@ -34,8 +34,8 @@ RSpec.describe 'MCP Integration' do
     }
 
     response = server.handle_request(list_request)
-    expect(response[:result][:tools].size).to eq(1)
-    expect(response[:result][:tools].first[:name]).to eq('execute_code')
+    expect(response[:result][:tools].size).to eq(2)
+    expect(response[:result][:tools].map { |t| t[:name] }).to include('execute_code', 'validate_code')
 
     # Execute code
     execute_request = {

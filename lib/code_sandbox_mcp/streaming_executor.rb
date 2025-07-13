@@ -31,16 +31,7 @@ module CodeSandboxMcp
 
     private
 
-    def send_initial_chunks(code, language)
-      yield({
-        type: 'content',
-        content: {
-          type: 'text',
-          text: code,
-          mimeType: CodeSandboxMcp.mime_type_for(language)
-        }
-      })
-
+    def send_initial_chunks(_code, language)
       yield({
         type: 'progress',
         data: {
@@ -72,20 +63,18 @@ module CodeSandboxMcp
     end
 
     def setup_stream_readers(stdout, stderr, output_buffer, error_buffer, &)
-      stdout_reader = Thread.new do
-        stream_output(stdout, output_buffer, 'stdout', &)
+      stdout_reader = create_reader_thread(stdout, output_buffer, 'stdout', &)
+      stderr_reader = create_reader_thread(stderr, error_buffer, 'stderr', &)
+      [stdout_reader, stderr_reader]
+    end
+
+    def create_reader_thread(stream, buffer, role, &)
+      Thread.new do
+        stream_output(stream, buffer, role, &)
       rescue StandardError => e
         error_message = e.message
-        logger.error "Stdout reader error: #{error_message}" if defined?(logger)
+        logger.error "#{role.capitalize} reader error: #{error_message}" if defined?(logger)
       end
-
-      stderr_reader = Thread.new do
-        stream_output(stderr, error_buffer, 'stderr', &)
-      rescue StandardError
-        logger.error "Stderr reader error: #{error_message}" if defined?(logger)
-      end
-
-      [stdout_reader, stderr_reader]
     end
 
     def stream_output(stream, buffer, role)
@@ -175,7 +164,6 @@ module CodeSandboxMcp
                                        errorLines: error_buffer.size,
                                        timestamp: current_timestamp
                                      }),
-          mimeType: 'application/json',
           annotations: {
             role: 'result',
             final: true

@@ -12,7 +12,7 @@ test_example() {
     local file=$2
     echo -n "Testing $name... "
     
-    if cat "$file" | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest 2>/dev/null | grep -q '"isError":false'; then
+    if cat "$file" | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest 2>/dev/null | grep -q '"exitCode":[[:space:]]*0'; then
         echo -e "${GREEN}✓ PASSED${NC}"
         return 0
     else

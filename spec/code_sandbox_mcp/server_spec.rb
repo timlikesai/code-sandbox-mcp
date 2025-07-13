@@ -79,9 +79,9 @@ RSpec.describe CodeSandboxMcp::Server do
         expect(response[:jsonrpc]).to eq('2.0')
         expect(response[:id]).to eq(2)
         expect(response[:result][:tools]).to be_an(Array)
-        expect(response[:result][:tools].size).to eq(1)
+        expect(response[:result][:tools].size).to eq(2)
 
-        tool = response[:result][:tools].first
+        tool = response[:result][:tools].find { |t| t[:name] == 'execute_code' }
         expect(tool[:name]).to eq('execute_code')
         expect(tool[:description]).to include('Execute code in a secure Docker sandbox')
         expect(tool[:inputSchema]).to be_a(Hash)
