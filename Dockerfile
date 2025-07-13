@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     fish \
     bash \
     shadow \
+    jq \
     && npm install -g tsx
 
 WORKDIR /app

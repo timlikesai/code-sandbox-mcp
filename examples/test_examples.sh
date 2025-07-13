@@ -12,7 +12,7 @@ test_example() {
     local file=$2
     echo -n "Testing $name... "
     
-    if cat "$file" | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest 2>/dev/null | grep -q '"isError":false'; then
+    if jq -c . "$file" | bundle exec ruby ../bin/code-sandbox-mcp 2>/dev/null | grep -q 'Exit code: 0'; then
         echo -e "${GREEN}✓ PASSED${NC}"
         return 0
     else
@@ -22,14 +22,20 @@ test_example() {
 }
 
 echo -e "\nTesting JSON examples:"
-test_example "Basic tool call" "examples/correct_tool_call.json"
-test_example "JavaScript async" "examples/javascript_example.json"
-test_example "Error handling" "examples/error_handling.json"
+test_example "Basic tool call" "correct_tool_call.json"
+test_example "JavaScript async" "javascript_example.json"
+# Error handling intentionally exits with code 1
+echo -n "Testing Error handling... "
+if jq -c . "error_handling.json" | bundle exec ruby ../bin/code-sandbox-mcp 2>/dev/null | grep -q 'Exit code: 1'; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+else
+    echo -e "${RED}✗ FAILED${NC}"
+fi
 
 echo -e "\nTesting code execution:"
 
 echo -n "Testing Python streaming output... "
-RESULT=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"for i in range(3):\n    print(f\"Line {i+1}\")"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest 2>/dev/null)
+RESULT=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"for i in range(3):\n    print(f\"Line {i+1}\")"}}}' | bundle exec ruby ../bin/code-sandbox-mcp 2>/dev/null)
 if echo "$RESULT" | grep -q "Line 1" && echo "$RESULT" | grep -q "Line 2" && echo "$RESULT" | grep -q "Line 3"; then
     echo -e "${GREEN}✓ PASSED${NC}"
 else
@@ -44,7 +50,7 @@ for lang_code in "${LANGUAGES[@]}"; do
     echo -n "Testing $lang... "
     
     REQUEST="{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"execute_code\",\"arguments\":{\"language\":\"$lang\",\"code\":\"$code\"}}}"
-    if echo "$REQUEST" | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest 2>/dev/null | grep -q "works"; then
+    if echo "$REQUEST" | bundle exec ruby ../bin/code-sandbox-mcp 2>/dev/null | grep -q "works"; then
         echo -e "${GREEN}✓ PASSED${NC}"
     else
         echo -e "${RED}✗ FAILED${NC}"

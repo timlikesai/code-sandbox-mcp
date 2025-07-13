@@ -1,0 +1,47 @@
+{
+  "description": "Demo of both execute_code and validate_code tools",
+  "examples": [
+    {
+      "title": "First validate, then execute valid code",
+      "validate_request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "validate_code",
+          "arguments": {
+            "language": "python",
+            "code": "# Calculate factorial\ndef factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n-1)\n\nprint(f\"5! = {factorial(5)}\")"
+          }
+        }
+      },
+      "execute_request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "execute_code",
+          "arguments": {
+            "language": "python",
+            "code": "# Calculate factorial\ndef factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n-1)\n\nprint(f\"5! = {factorial(5)}\")"
+          }
+        }
+      }
+    },
+    {
+      "title": "Validate invalid code (doesn't execute)",
+      "validate_request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "validate_code",
+          "arguments": {
+            "language": "javascript",
+            "code": "# This won't work in JavaScript\nconst message = \"Hello\"\nconsole.log(message"
+          }
+        }
+      }
+    }
+  ]
+}

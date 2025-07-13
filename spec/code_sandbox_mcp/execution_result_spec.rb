@@ -30,7 +30,8 @@ RSpec.describe CodeSandboxMcp::Executor::ExecutionResult do
       expect(hash).to eq({
                            output: 'Hello',
                            error: 'Error',
-                           exit_code: 1
+                           exit_code: 1,
+                           execution_time: nil
                          })
     end
   end
@@ -49,7 +50,8 @@ RSpec.describe CodeSandboxMcp::Executor::ExecutionResult do
       expect(parsed).to eq({
                              'output' => 'Hello',
                              'error' => 'Warning',
-                             'exit_code' => 0
+                             'exit_code' => 0,
+                             'execution_time' => nil
                            })
     end
 

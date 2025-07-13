@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "javascript",
+      "code": "# Hello World in JavaScript\nfunction helloWorld() {\n    return \"Hello, World!\";\n}\n\nhelloWorld();"
+    }
+  }
+}

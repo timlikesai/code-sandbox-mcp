@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# CodeSandboxMcp provides secure code execution capabilities for multiple programming languages
-# through the Model Context Protocol (MCP). It supports containerized execution with
-# real-time output streaming and comprehensive error handling.
 module CodeSandboxMcp
   LANGUAGES = {
     'python' => { command: %w[python3], extension: '.py', mime_type: 'text/x-python' },

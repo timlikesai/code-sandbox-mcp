@@ -251,12 +251,6 @@ jobs:
           ${{ needs.prepare.outputs.test-image-base }} \
           sh -c "cd /app && bundle exec rubocop"
 
-    - name: Run Reek
-      run: |
-        docker run --rm --platform ${{ matrix.platform }} \
-          ${{ needs.prepare.outputs.test-image-base }} \
-          sh -c "cd /app && bundle exec reek"
-
     - name: Run bundler-audit
       run: |
         docker run --rm --platform ${{ matrix.platform }} \

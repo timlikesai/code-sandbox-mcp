@@ -18,8 +18,8 @@ test_example() {
     local file=$2
     echo -n "Testing $name... "
     
-    # Compact JSON to single line using Ruby
-    if ruby -rjson -e "puts JSON.parse(File.read('$file')).to_json" | ruby /app/bin/code-sandbox-mcp 2>/dev/null | grep -q '"isError":false'; then
+    # Compact JSON to single line using jq
+    if jq -c . "$file" | ruby /app/bin/code-sandbox-mcp 2>/dev/null | grep -q 'Exit code: 0'; then
         echo -e "${GREEN}✓ PASSED${NC}"
         return 0
     else
@@ -32,7 +32,13 @@ test_example() {
 echo -e "\nTesting JSON examples:"
 test_example "Basic tool call" "correct_tool_call.json"
 test_example "JavaScript async" "javascript_example.json"
-test_example "Error handling" "error_handling.json"
+# Error handling intentionally exits with code 1
+echo -n "Testing Error handling... "
+if jq -c . "error_handling.json" | ruby /app/bin/code-sandbox-mcp 2>/dev/null | grep -q 'Exit code: 1'; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+else
+    echo -e "${RED}✗ FAILED${NC}"
+fi
 
 # Test code execution
 echo -e "\nTesting code execution:"

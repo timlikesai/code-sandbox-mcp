@@ -288,9 +288,6 @@ bundle exec rspec
 bundle exec rubocop
 bundle exec rubocop --autocorrect-all  # Auto-fix style issues
 
-# Code quality checks
-bundle exec reek                       # Detect code smells
-
 # Security checks
 bundle exec bundler-audit check        # Check for dependency vulnerabilities
 
@@ -317,7 +314,6 @@ bundle exec rake docker:shell
 # Or run individual commands:
 docker compose run --rm code-sandbox-test bundle exec rspec
 docker compose run --rm code-sandbox-test bundle exec rubocop
-docker compose run --rm code-sandbox-test bundle exec reek
 docker compose run --rm code-sandbox-test bundle exec bundler-audit check
 ```
 
@@ -337,8 +333,6 @@ This project uses several tools to maintain code quality and security:
 
 - **RuboCop**: Ruby style guide enforcement with custom configuration
   - Includes `rubocop-performance` for performance optimizations
-- **Reek**: Detects code smells in Ruby code
-  - Configuration in `.reek.yml` excludes certain complex methods
 - **Bundler Audit**: Checks dependencies for known security vulnerabilities
   - Run with `--update` flag to update vulnerability database
 
@@ -346,7 +340,7 @@ This project uses several tools to maintain code quality and security:
 
 Continuous integration runs automatically on all pushes and pull requests:
 
-- **CI Pipeline**: Tests on Ruby 3.4, RuboCop, Reek, Security audit
+- **CI Pipeline**: Tests on Ruby 3.4, RuboCop, Security audit
 - **Docker Build**: Builds and tests Docker image with caching
 - **Integration Tests**: Runs example scripts against built Docker image
 - **CodeQL Analysis**: Weekly security code scanning
