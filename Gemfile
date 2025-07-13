@@ -4,6 +4,7 @@ source 'https://rubygems.org'
 
 # Core dependencies
 gem 'json', '~> 2.7'
+gem 'mcp', '~> 0.1.0'
 
 group :development, :test do
   # Testing

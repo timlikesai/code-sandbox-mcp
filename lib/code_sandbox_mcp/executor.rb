@@ -7,12 +7,8 @@ require 'securerandom'
 require 'timeout'
 
 module CodeSandboxMcp
-  # Executor provides synchronous code execution with timeout and resource management.
-  # It executes code in temporary files and captures stdout, stderr, and exit codes.
   class Executor
-    # ExecutionResult encapsulates the results of code execution including
-    # output, error messages, exit code, and execution metadata.
-    ExecutionResult = Struct.new(:output, :error, :exit_code, keyword_init: true)
+    ExecutionResult = Struct.new(:output, :error, :exit_code, :execution_time, keyword_init: true)
 
     def execute(language, code)
       lang_config = LANGUAGES[language]
@@ -32,6 +28,7 @@ module CodeSandboxMcp
       output = ''
       error = ''
       exit_code = nil
+      start_time = Time.now
 
       cmd = command + [file_path]
       env = ENV.to_h.merge('HOME' => working_dir)
@@ -45,25 +42,29 @@ module CodeSandboxMcp
           end
         end
 
-        build_success_result(output, error, exit_code || 0)
+        execution_time = Time.now - start_time
+        build_success_result(output, error, exit_code || 0, execution_time)
       rescue Timeout::Error
-        build_timeout_result(output)
+        execution_time = Time.now - start_time
+        build_timeout_result(output, execution_time)
       end
     end
 
-    def build_success_result(output, error, exit_code)
+    def build_success_result(output, error, exit_code, execution_time)
       ExecutionResult.new(
         output: output.strip,
         error: error.strip,
-        exit_code: exit_code
+        exit_code: exit_code,
+        execution_time: execution_time
       )
     end
 
-    def build_timeout_result(output)
+    def build_timeout_result(output, execution_time)
       ExecutionResult.new(
         output: output.strip,
         error: 'Execution timeout exceeded',
-        exit_code: -1
+        exit_code: -1,
+        execution_time: execution_time
       )
     end
   end

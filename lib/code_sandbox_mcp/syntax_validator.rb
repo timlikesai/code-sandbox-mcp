@@ -4,8 +4,6 @@ require 'open3'
 require 'tempfile'
 
 module CodeSandboxMcp
-  # SyntaxValidator provides pre-execution syntax validation for supported languages.
-  # This helps provide clear error messages before attempting to run invalid code.
   class SyntaxValidator
     class ValidationError < StandardError
       attr_reader :line, :column, :details

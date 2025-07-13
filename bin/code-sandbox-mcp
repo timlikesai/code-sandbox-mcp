@@ -1,7 +1,19 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'bundler/setup'
+require 'mcp'
+require 'mcp/transports/stdio'
 require_relative '../lib/code_sandbox_mcp'
+require_relative '../lib/code_sandbox_mcp/tools'
 
-server = CodeSandboxMcp::Server.new
-server.run
+# Create MCP server with our tools
+server = MCP::Server.new(
+  name: 'code-sandbox-mcp',
+  version: CodeSandboxMcp::VERSION,
+  tools: CodeSandboxMcp::Tools::ALL
+)
+
+# Use stdio transport for communication
+transport = MCP::Transports::StdioTransport.new(server)
+transport.open
