@@ -147,6 +147,11 @@ module CodeSandboxMcp
       FileUtils.mkdir_p(data_dir)
 
       file_path = File.join(data_dir, filename)
+
+      # Create subdirectories if filename contains paths
+      subdir = File.dirname(file_path)
+      FileUtils.mkdir_p(subdir) if subdir != data_dir
+
       File.write(file_path, code)
 
       file_path
