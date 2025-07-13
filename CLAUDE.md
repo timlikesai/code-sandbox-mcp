@@ -86,21 +86,35 @@ docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 
 The server implements three MCP methods:
 1. `initialize` - Returns protocol version and capabilities
-2. `tools/list` - Returns the `execute_code` tool definition
-3. `tools/call` - Executes code and returns streaming results
+2. `tools/list` - Returns all tool definitions (execute_code, validate_code, reset_session)
+3. `tools/call` - Executes the requested tool and returns results
+
+**Available Tools:**
+- `execute_code` - Code execution with automatic session management (stateful by default)
+- `validate_code` - Syntax validation
+- `reset_session` - Reset session for specific language or all languages
 
 **Response Format:**
 - Original code with MIME type
-- Stdout/stderr lines with `streamed: true` annotation
+- Stdout/stderr output
 - Final metadata block with exit code and timing
 
 ## Code Execution Flow
 
-1. **StreamingExecutor** creates a temporary directory
-2. Writes code to a file with appropriate extension
-3. Uses `Open3.popen3` to execute with 30-second timeout
-4. Streams output line-by-line using Ruby threads
-5. Returns structured MCP response with all content blocks
+### Code Execution (execute_code)
+1. **SessionManager** automatically gets or creates session for the language
+2. Maintains history of previous code definitions per language
+3. Prepends relevant history (imports, functions, variables) to new code  
+4. **Executor** executes in session directory, preserving state
+5. Returns structured MCP response with output
+
+### Session Management
+- Each language has its own default session
+- Sessions expire after 1 hour of inactivity
+- Maximum 100 concurrent sessions
+- Each session has isolated filesystem and execution context
+- History filtering preserves only definitions, not output
+- Use `reset_session` tool to clear session state
 
 ## Security Constraints
 

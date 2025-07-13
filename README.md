@@ -12,6 +12,8 @@ A secure Docker-based MCP server for executing code in multiple languages, imple
 - **Real-time Streaming**: Live output streaming with MCP protocol compliance
 - **Full MCP Protocol**: Implements Model Context Protocol for tool calling
 - **Comprehensive Testing**: RSpec test suite with 99%+ coverage
+- **Automatic Session Management**: State persists between executions for each language
+- **Session Reset Tool**: Clear language sessions when needed
 
 ## Installation
 
@@ -97,17 +99,69 @@ docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 
 ## Usage
 
-The server exposes one tool: `execute_code`
+The server exposes three tools:
 
-Output is automatically collected and streamed internally, providing real-time execution while maintaining MCP protocol compatibility.
+### Tools
 
-### Example Request:
+1. **execute_code** - Execute code with automatic session management (stateful by default)
+2. **validate_code** - Validate syntax without execution  
+3. **reset_session** - Reset the session for a specific language or all languages
+
+### Automatic Session Management
+
+The `execute_code` tool now maintains state automatically for each language, perfect for:
+- Building up complex programs incrementally
+- Interactive REPL-like experiences
+- Testing code that depends on previous definitions
+- Educational scenarios where context matters
+
+Each language has its own isolated session that maintains:
+- Variables and their values
+- Function/class definitions
+- Imported modules
+- Execution history
+
+Sessions automatically expire after 1 hour of inactivity.
+
+### Example Requests:
+
+#### Automatic Stateful Execution
 ```json
+// First request - define a function
 {
   "tool": "execute_code",
   "arguments": {
     "language": "python",
-    "code": "print('Hello, World!')"
+    "code": "def greet(name):\n    return f'Hello, {name}!'"
+  }
+}
+
+// Second request - use the function (it's automatically available!)
+{
+  "tool": "execute_code",
+  "arguments": {
+    "language": "python",
+    "code": "print(greet('World'))"
+  }
+}
+
+```
+
+#### Reset Session
+```json
+// Reset Python session only
+{
+  "tool": "reset_session",
+  "arguments": {
+    "language": "python"
+  }
+}
+
+// Reset all language sessions
+{
+  "tool": "reset_session",
+  "arguments": {
+    "language": "all"
   }
 }
 ```
@@ -130,10 +184,9 @@ Output is automatically collected and streamed internally, providing real-time e
     },
     {
       "type": "text",
-      "text": "{\"exitCode\": 0, \"executionTime\": \"45ms\", \"language\": \"python\", \"timestamp\": \"2024-01-12T10:30:45Z\"}",
-      "mimeType": "application/json",
+      "text": "Exit code: 0\nExecution time: 0.05s",
       "annotations": {
-        "role": "metadata"
+        "final": true
       }
     }
   ],
@@ -145,7 +198,7 @@ Output is automatically collected and streamed internally, providing real-time e
 - **Code**: Original source code with appropriate MIME type
 - **stdout**: Standard output with `role: stdout` annotation
 - **stderr**: Error output with `role: stderr` annotation (if any)
-- **metadata**: JSON-formatted execution details
+- **final**: Execution metadata with exit code and timing
 
 ### Error Response:
 ```json

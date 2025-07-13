@@ -22,6 +22,16 @@ module CodeSandboxMcp
       end
     end
 
+    def execute_with_dir(language, code, working_dir)
+      lang_config = LANGUAGES[language]
+      raise ArgumentError, "Unsupported language: #{language}" unless lang_config
+
+      file_path = File.join(working_dir, "main#{lang_config[:extension]}")
+      File.write(file_path, code)
+
+      execute_command(lang_config[:command], file_path, working_dir)
+    end
+
     private
 
     def execute_command(command, file_path, working_dir)

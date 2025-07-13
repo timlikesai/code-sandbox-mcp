@@ -8,7 +8,7 @@ RSpec.describe CodeSandboxMcp::Tools do
     it 'contains all available tool classes' do
       expect(described_class::ALL).to be_an(Array)
       expect(described_class::ALL).to be_frozen
-      expect(described_class::ALL.size).to eq(2)
+      expect(described_class::ALL.size).to eq(3)
     end
 
     it 'contains ExecuteCode tool' do
@@ -17,6 +17,10 @@ RSpec.describe CodeSandboxMcp::Tools do
 
     it 'contains ValidateCode tool' do
       expect(described_class::ALL).to include(CodeSandboxMcp::Tools::ValidateCode)
+    end
+
+    it 'contains ResetSession tool' do
+      expect(described_class::ALL).to include(CodeSandboxMcp::Tools::ResetSession)
     end
 
     it 'all tools inherit from MCP::Tool' do
@@ -42,7 +46,7 @@ RSpec.describe CodeSandboxMcp::Tools do
         schema_hash = schema.to_h
         expect(schema_hash[:type]).to eq('object')
         expect(schema_hash[:properties]).to be_a(Hash)
-        expect(schema_hash[:required]).to be_an(Array)
+        expect(schema_hash[:required]).to be_an(Array) if schema_hash[:required]
 
         # Each tool should respond to call method
         expect(tool_class).to respond_to(:call)
@@ -69,6 +73,11 @@ RSpec.describe CodeSandboxMcp::Tools do
     it 'has ValidateCode class defined' do
       expect(defined?(CodeSandboxMcp::Tools::ValidateCode)).to be_truthy
       expect(CodeSandboxMcp::Tools::ValidateCode).to be_a(Class)
+    end
+
+    it 'has ResetSession class defined' do
+      expect(defined?(CodeSandboxMcp::Tools::ResetSession)).to be_truthy
+      expect(CodeSandboxMcp::Tools::ResetSession).to be_a(Class)
     end
   end
 end

@@ -77,7 +77,7 @@ RSpec.describe CodeSandboxMcp::Executor do
       it 'executes Java code' do
         skip 'Java not installed' unless command_available?('java')
 
-        result = executor.execute('java', 'public class Main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }')
+        result = executor.execute('java', 'public class main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }')
 
         expect(result.output).to eq('Hello, Java!')
         expect(result.error).to be_empty
