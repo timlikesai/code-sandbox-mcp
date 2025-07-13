@@ -4,14 +4,14 @@ A secure Docker-based MCP server for executing code in multiple languages, imple
 
 ## Features
 
-- **7 Supported Languages**: Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish
+- **12 Supported Languages**: Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish, Java, Clojure, Kotlin, Groovy, Scala
 - **Secure Execution**: Runs in Docker with strict resource limits
-- **Alpine Linux**: Optimized 727MB production image (38% smaller than Debian)
+- **Alpine Linux**: Optimized 1.5GB production image with JVM support
 - **Multi-stage Build**: Separate optimized images for production and testing
-- **Ruby 3.4**: Uses latest stable Ruby version
+- **Ruby 3.4 + JDK 21**: Latest stable Ruby with modern Java runtime
 - **Real-time Streaming**: Live output streaming with MCP protocol compliance
 - **Full MCP Protocol**: Implements Model Context Protocol for tool calling
-- **Comprehensive Testing**: RSpec test suite with 99%+ coverage
+- **Comprehensive Testing**: RSpec test suite with 97.6% coverage
 - **Automatic Session Management**: State persists between executions for each language
 - **Session Reset Tool**: Clear language sessions when needed
 
@@ -405,8 +405,8 @@ Continuous integration runs automatically on all pushes and pull requests:
 This project uses a multi-stage Docker build for optimal performance and security:
 
 ### Docker Images
-- **Production Image**: Alpine-based, 727MB, contains only runtime dependencies
-- **Test Image**: 908MB, includes development dependencies and test files
+- **Production Image**: Alpine-based, 1.5GB, contains runtime dependencies + JDK + JVM languages
+- **Test Image**: 1.68GB, includes development dependencies and test files
 - **Builder Stage**: Intermediate stage for gem compilation and optimization
 
 ### Components
