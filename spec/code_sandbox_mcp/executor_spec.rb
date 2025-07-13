@@ -73,6 +73,56 @@ RSpec.describe CodeSandboxMcp::Executor do
         expect(result.error).to be_empty
         expect(result.exit_code).to eq(0)
       end
+
+      it 'executes Java code' do
+        skip 'Java not installed' unless command_available?('java')
+
+        result = executor.execute('java', 'public class Main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }')
+
+        expect(result.output).to eq('Hello, Java!')
+        expect(result.error).to be_empty
+        expect(result.exit_code).to eq(0)
+      end
+
+      it 'executes Clojure code' do
+        skip 'Clojure not installed' unless command_available?('clojure')
+
+        result = executor.execute('clojure', '(println "Hello, Clojure!")')
+
+        expect(result.output).to eq('Hello, Clojure!')
+        expect(result.error).to be_empty
+        expect(result.exit_code).to eq(0)
+      end
+
+      it 'executes Kotlin code' do
+        skip 'Kotlin not installed' unless command_available?('kotlin')
+
+        result = executor.execute('kotlin', 'println("Hello, Kotlin!")')
+
+        expect(result.output).to eq('Hello, Kotlin!')
+        expect(result.error).to be_empty
+        expect(result.exit_code).to eq(0)
+      end
+
+      it 'executes Groovy code' do
+        skip 'Groovy not installed' unless command_available?('groovy')
+
+        result = executor.execute('groovy', 'println "Hello, Groovy!"')
+
+        expect(result.output).to eq('Hello, Groovy!')
+        expect(result.error).to be_empty
+        expect(result.exit_code).to eq(0)
+      end
+
+      it 'executes Scala code' do
+        skip 'Scala not installed' unless command_available?('scala')
+
+        result = executor.execute('scala', '@main def hello() = println("Hello, Scala!")')
+
+        expect(result.output).to eq('Hello, Scala!')
+        expect(result.error).to be_empty
+        expect(result.exit_code).to eq(0)
+      end
     end
 
     context 'with output handling' do

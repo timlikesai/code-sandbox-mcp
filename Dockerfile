@@ -12,7 +12,24 @@ RUN apk add --no-cache \
     bash \
     shadow \
     jq \
-    && npm install -g tsx
+    openjdk21-jdk \
+    clojure \
+    && npm install -g tsx \
+    && mkdir -p /opt/jvm-languages \
+    && cd /opt/jvm-languages \
+    && curl -L https://github.com/JetBrains/kotlin/releases/download/v1.9.22/kotlin-compiler-1.9.22.zip -o kotlin.zip \
+    && unzip kotlin.zip && rm kotlin.zip \
+    && curl -L https://groovy.jfrog.io/artifactory/dist-release-local/groovy-zips/apache-groovy-binary-4.0.18.zip -o groovy.zip \
+    && unzip groovy.zip && rm groovy.zip \
+    && mv groovy-4.0.18 groovy \
+    && curl -L https://github.com/lampepfl/dotty/releases/download/3.3.1/scala3-3.3.1.tar.gz -o scala.tar.gz \
+    && tar xzf scala.tar.gz && rm scala.tar.gz \
+    && mv scala3-3.3.1 scala \
+    && ln -s /opt/jvm-languages/kotlinc/bin/kotlin /usr/local/bin/kotlin \
+    && ln -s /opt/jvm-languages/kotlinc/bin/kotlinc /usr/local/bin/kotlinc \
+    && ln -s /opt/jvm-languages/groovy/bin/groovy /usr/local/bin/groovy \
+    && ln -s /opt/jvm-languages/scala/bin/scala /usr/local/bin/scala \
+    && ln -s /opt/jvm-languages/scala/bin/scalac /usr/local/bin/scalac
 
 WORKDIR /app
 

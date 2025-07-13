@@ -8,7 +8,8 @@ module CodeSandboxMcp
     class ExecuteCode < Base
       tool_name 'execute_code'
       description 'Execute code in a secure Docker sandbox. ' \
-                  'Supports Python, JavaScript, TypeScript, Ruby, Bash, Zsh, and Fish.'
+                  'Supports Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish, ' \
+                  'Java, Clojure, Kotlin, Groovy, and Scala.'
       input_schema(common_input_schema)
 
       class << self

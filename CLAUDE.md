@@ -140,8 +140,16 @@ When executed via Docker, the code runs with:
 Each language in `LANGUAGES` hash has:
 - `extension` - File extension for the language
 - `command` - Array of command and arguments
+- `mime_type` - MIME type for the language
 
-Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`, `zsh`
+Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`, `zsh`, `java`, `clojure`, `kotlin`, `groovy`, `scala`
+
+### JVM Languages Notes
+- **Java**: Uses Java 21's single-source-file execution feature
+- **Clojure**: Runs directly without compilation
+- **Kotlin**: Uses `.kts` extension for script mode
+- **Groovy**: Executes as scripts without compilation
+- **Scala**: Uses Scala 3 with `@main` annotation for scripts
 
 ## Important Design Decisions
 
@@ -149,8 +157,8 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 - **Alpine Base**: Uses `ruby:3.4.4-alpine` for minimal size and security
 - **Multi-stage Build**: `base` → `builder` → `production` and `test` stages
 - **Multi-Architecture**: Supports both `linux/amd64` and `linux/arm64` platforms
-- **Production Image**: 727MB, contains only runtime files (`lib/`, `bin/`, gems)
-- **Test Image**: 908MB, includes development dependencies and test files
+- **Production Image**: 1.5GB (was 727MB before JVM languages), contains runtime files + JDK + JVM language runtimes
+- **Test Image**: 1.68GB (was 908MB), includes development dependencies and test files
 - **Single Repository**: Both images use `ghcr.io/timlikesai/code-sandbox-mcp`
 - **Tag Prefixes**: Test images use `test-` prefix (e.g., `test-latest`, `test-main`)
 - **Layer Sharing**: Optimized caching between stages and builds
@@ -210,7 +218,7 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 
 ## Known Limitations & Future Improvements
 
-1. **Language Support**: Some languages (Go, Rust, Java) require compilation steps not yet implemented
+1. **Language Support**: Some languages (Go, Rust, C/C++) require compilation steps not yet implemented
 2. **File System Access**: Currently no persistent storage between executions
 3. **Binary Output**: No support for returning binary data (images, etc.)
 4. **Interactive Input**: No stdin support for interactive programs

@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "scala",
+      "code": "@main def hello(): Unit = println(\"Hello from Scala!\")"
+    }
+  }
+}
