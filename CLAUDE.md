@@ -150,6 +150,7 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 ### Docker Image Strategy
 - **Alpine Base**: Uses `ruby:3.4.4-alpine` for minimal size and security
 - **Multi-stage Build**: `base` → `builder` → `production` and `test` stages
+- **Multi-Architecture**: Supports both `linux/amd64` and `linux/arm64` platforms
 - **Production Image**: 727MB, contains only runtime files (`lib/`, `bin/`, gems)
 - **Test Image**: 908MB, includes development dependencies and test files
 - **Single Repository**: Both images use `ghcr.io/timlikesai/code-sandbox-mcp`
@@ -158,13 +159,15 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 
 ### GitHub Container Registry Integration
 - **Image Tags**:
-  - `latest` - Only pushed from main branch
-  - `main` - Latest main branch build
-  - `<branch-name>` - Feature branch builds
-  - `<sha>` - Commit-specific builds
-  - `test-<tag>` - Test image variants
+  - `latest` - Only pushed from main branch (multi-arch)
+  - `main` - Latest main branch build (multi-arch)
+  - `<branch-name>` - Feature branch builds (multi-arch)
+  - `<sha>` - Commit-specific builds (multi-arch)
+  - `test-<tag>` - Test image variants (multi-arch)
+- **Multi-Architecture**: All images built for `linux/amd64` and `linux/arm64`
 - **Caching Strategy**: Uses inline cache with `cache-from` pulling from registry
 - **Auto-push**: CI pushes all builds, but `latest` only on main branch
+- **Native Runners**: ARM64 builds use native `ubuntu-24.04-arm` runners (no QEMU needed)
 
 ### Security Decisions
 - **No Network Access**: `--network none` prevents any external connections
@@ -191,10 +194,11 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 ## GitHub Actions Workflows
 
 ### CI Workflow (`ci.yml`)
-- Builds test image first (includes production layers)
-- Runs all tests and quality checks
-- Builds and pushes production image
-- Uses `TEST_IMAGE_TAG` env var for DRY code
+- **Parallel Architecture Builds**: Separate AMD64 and ARM64 build jobs using native runners
+- **Multi-Arch Manifest Creation**: Merges architecture-specific images after builds complete
+- **Parallel Testing**: Test and smoke-test jobs run concurrently on both architectures
+- **Native ARM64 Support**: Uses `ubuntu-24.04-arm` runners for ARM64 builds/tests (no QEMU)
+- **Optimized Flow**: `prepare` → `build` (parallel) → `merge` → `test/smoke` (parallel) → `tag`
 
 ### Release Workflow (`release.yml`)
 - Triggers on version tags (`v*`)
