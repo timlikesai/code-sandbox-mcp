@@ -33,6 +33,7 @@ module CodeSandboxMcp
       cmd = command + [file_path]
       env = ENV.to_h.merge('HOME' => working_dir)
 
+      execution_time = nil
       begin
         Timeout.timeout(EXECUTION_TIMEOUT) do
           Open3.popen3(env, *cmd, chdir: working_dir) do |_stdin, stdout, stderr, wait_thr|
@@ -42,12 +43,16 @@ module CodeSandboxMcp
           end
         end
 
-        execution_time = Time.now - start_time
+        execution_time = calculate_execution_time(start_time)
         build_success_result(output, error, exit_code || 0, execution_time)
       rescue Timeout::Error
-        execution_time = Time.now - start_time
+        execution_time ||= calculate_execution_time(start_time)
         build_timeout_result(output, execution_time)
       end
+    end
+
+    def calculate_execution_time(start_time)
+      Time.now - start_time
     end
 
     def build_success_result(output, error, exit_code, execution_time)

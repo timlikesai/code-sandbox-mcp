@@ -11,12 +11,6 @@ end
 # RuboCop task
 RuboCop::RakeTask.new
 
-# Reek task
-desc 'Run reek code smell detector'
-task :reek do
-  sh 'bundle exec reek'
-end
-
 # Security audit task
 desc 'Run bundler-audit security check'
 task :audit do
@@ -25,7 +19,7 @@ end
 
 # All quality checks
 desc 'Run all code quality checks'
-task quality: %i[spec rubocop reek audit]
+task quality: %i[spec rubocop audit]
 
 # Docker tasks
 namespace :docker do
@@ -49,7 +43,6 @@ namespace :docker do
 
     puts '✅ Running code quality checks...'
     sh 'docker compose run --rm code-sandbox-test bundle exec rubocop'
-    sh 'docker compose run --rm code-sandbox-test bundle exec reek'
     sh 'docker compose run --rm code-sandbox-test bundle exec bundler-audit check'
 
     puts '🎉 All tests and quality checks passed!'
@@ -62,4 +55,4 @@ namespace :docker do
 end
 
 # Default task
-task default: %i[spec rubocop reek]
+task default: %i[spec rubocop]

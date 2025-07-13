@@ -79,8 +79,7 @@ docker run --rm -i \
 ## Security Audit
 
 This project uses:
-- RuboCop for code quality
-- Reek for code smell detection
+- RuboCop for code quality and style enforcement
 - Bundler Audit for dependency vulnerabilities
 - SimpleCov for test coverage (99%+)
 

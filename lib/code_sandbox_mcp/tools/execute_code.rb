@@ -33,14 +33,15 @@ module CodeSandboxMcp
         end
 
         def output_block(output, role)
-          return nil if output.nil? || output.empty?
+          return nil if output.to_s.empty?
 
           create_content_block(output, role: role)
         end
 
         def execution_metadata(result)
           lines = ["Exit code: #{result.exit_code}"]
-          lines << "Execution time: #{format('%.2f', result.execution_time)}s" if result.execution_time
+          execution_time = result.execution_time
+          lines << "Execution time: #{format('%.2f', execution_time)}s" if execution_time
           lines.join("\n")
         end
       end

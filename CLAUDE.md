@@ -30,7 +30,6 @@ bundle exec rspec spec/path/to/file  # Run specific test
 # Run linters and code quality checks
 bundle exec rubocop                   # Run linter
 bundle exec rubocop --autocorrect-all # Auto-fix style issues
-bundle exec reek                      # Run code smell detector
 bundle exec bundler-audit check --update # Check for security vulnerabilities
 
 # Run all checks at once
@@ -47,7 +46,6 @@ docker compose build code-sandbox-test # Build test image only
 # Run tests in Docker (includes all dependencies)
 docker compose run --rm code-sandbox-test bundle exec rspec
 docker compose run --rm code-sandbox-test bundle exec rubocop
-docker compose run --rm code-sandbox-test bundle exec reek
 docker compose run --rm code-sandbox-test bundle exec bundler-audit check --update
 
 # Run all tests and checks using Rake
@@ -127,7 +125,7 @@ When executed via Docker, the code runs with:
 1. **Setup**: Tests can run locally or in Docker container
 2. **Coverage**: SimpleCov tracks coverage (writes to `/tmp/coverage` in Docker)
 3. **RSpec**: Runs all specs with randomized order
-4. **Quality Checks**: RuboCop, Reek, and Bundler Audit run after tests
+4. **Quality Checks**: RuboCop and Bundler Audit run after tests
 5. **Examples**: Integration tests verify real MCP protocol exchanges
 
 ### Key Test Files

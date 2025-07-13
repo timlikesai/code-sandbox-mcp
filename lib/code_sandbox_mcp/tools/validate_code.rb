@@ -36,7 +36,8 @@ module CodeSandboxMcp
 
         def format_validation_error(error)
           parts = [error.message]
-          parts << "Details: #{error.details}" if error.details
+          details = error.details
+          parts << "Details: #{details}" if details
           parts.join("\n")
         end
       end

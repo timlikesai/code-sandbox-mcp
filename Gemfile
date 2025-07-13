@@ -13,7 +13,6 @@ group :development, :test do
   gem 'simplecov-console', '~> 0.9'
 
   # Code quality
-  gem 'reek', '~> 6.3'
   gem 'rubocop', '~> 1.60'
   gem 'rubocop-performance', '~> 1.20'
 

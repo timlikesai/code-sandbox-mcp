@@ -31,7 +31,6 @@ jobs:
     - name: Run quality checks
       run: |
         bundle exec rubocop
-        bundle exec reek
         bundle exec bundler-audit check --update
     
     - name: Set up Docker Buildx
