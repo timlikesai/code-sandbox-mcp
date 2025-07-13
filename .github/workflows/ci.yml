@@ -356,34 +356,6 @@ jobs:
         docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main \
           ${{ needs.prepare.outputs.prod-image-base }}
 
-  cleanup-arch-specific:
-    name: Cleanup Architecture-Specific Images
-    runs-on: ubuntu-24.04
-    needs: [prepare, tag-and-push-final]
-    if: always() && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: write
-    continue-on-error: true
-
-    steps:
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Delete architecture-specific tags
-      run: |
-        # Note: This requires the gh CLI and appropriate permissions
-        # For now, we'll just document what tags exist
-        echo "Architecture-specific images that could be cleaned up:"
-        echo "- ${{ needs.prepare.outputs.test-image-base }}-amd64"
-        echo "- ${{ needs.prepare.outputs.test-image-base }}-arm64"
-        echo "- ${{ needs.prepare.outputs.prod-image-base }}-amd64"
-        echo "- ${{ needs.prepare.outputs.prod-image-base }}-arm64"
-
   summary:
     name: Build Summary
     runs-on: ubuntu-24.04
