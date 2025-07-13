@@ -7,6 +7,7 @@ services:
     stdin_open: true
     tty: true
     read_only: true
+    network_mode: none
     tmpfs:
       - /tmp
       - /app/tmp

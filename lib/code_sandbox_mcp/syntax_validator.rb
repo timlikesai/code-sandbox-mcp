@@ -34,6 +34,10 @@ module CodeSandboxMcp
 
       private
 
+      def raise_language_syntax_error(language, stderr)
+        raise ValidationError, "#{language} syntax error: #{stderr.strip}"
+      end
+
       def validate_python(code)
         validate_with_tempfile(code, '.py') do |file_path|
           ['python3', '-m', 'py_compile', file_path]
@@ -111,7 +115,7 @@ module CodeSandboxMcp
           end
         end
 
-        raise ValidationError, "Python syntax error: #{stderr.strip}"
+        raise_language_syntax_error('Python', stderr)
       end
 
       def parse_ruby_error(stderr)
@@ -121,7 +125,7 @@ module CodeSandboxMcp
           raise ValidationError.new("Ruby syntax error on line #{line_number}: #{message}", line: line_number)
         end
 
-        raise ValidationError, "Ruby syntax error: #{stderr.strip}"
+        raise_language_syntax_error('Ruby', stderr)
       end
 
       def parse_javascript_error(stderr, code)
@@ -137,7 +141,7 @@ module CodeSandboxMcp
                                     line: line_number, details: error_line)
         end
 
-        raise ValidationError, "JavaScript syntax error: #{stderr.strip}"
+        raise_language_syntax_error('JavaScript', stderr)
       end
 
       def extract_js_error_message(stderr)
@@ -162,7 +166,7 @@ module CodeSandboxMcp
           raise ValidationError.new("Bash syntax error on line #{line_number}: #{message}", line: line_number)
         end
 
-        raise ValidationError, "Bash syntax error: #{stderr.strip}"
+        raise_language_syntax_error('Bash', stderr)
       end
 
       def parse_shell_error(stderr, shell_name)
@@ -174,7 +178,7 @@ module CodeSandboxMcp
                                     line: line_number)
         end
 
-        raise ValidationError, "#{capitalized_shell} syntax error: #{stderr.strip}"
+        raise_language_syntax_error(capitalized_shell, stderr)
       end
     end
   end

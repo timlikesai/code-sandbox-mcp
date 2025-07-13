@@ -2,8 +2,14 @@
 
 require 'spec_helper'
 require 'code_sandbox_mcp/tools/execute_code'
+require 'code_sandbox_mcp/session_manager'
 
 RSpec.describe CodeSandboxMcp::Tools::ExecuteCode do
+  before do
+    # Clear all sessions to ensure test isolation
+    CodeSandboxMcp::SessionManager.instance.clear_all_sessions
+  end
+
   describe '.call' do
     context 'with valid code' do
       it 'executes Python code successfully' do
@@ -196,7 +202,7 @@ RSpec.describe CodeSandboxMcp::Tools::ExecuteCode do
   describe 'tool metadata' do
     it 'has valid metadata' do
       expect_valid_tool_metadata(described_class, 'execute_code')
-      expect(described_class.description_value).to include('Execute code in a secure Docker sandbox')
+      expect(described_class.description_value).to include('Execute code securely in isolated Docker containers')
     end
   end
 end

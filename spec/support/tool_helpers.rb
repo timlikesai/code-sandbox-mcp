@@ -1,6 +1,26 @@
 # frozen_string_literal: true
 
 module ToolHelpers
+  def execute_tool(tool_class, **params)
+    tool_class.call(**params)
+  end
+
+  def extract_stdout(content)
+    stdout_blocks = content.select do |c|
+      c[:annotations] && c[:annotations][:role] == 'stdout'
+    end
+    return '' if stdout_blocks.empty?
+
+    stdout_blocks.map { |block| block[:text] }.join("\n")
+  end
+
+  def extract_stderr(content)
+    stderr_blocks = content.select { |c| c[:annotations] && c[:annotations][:role] == 'stderr' }
+    return '' if stderr_blocks.empty?
+
+    stderr_blocks.map { |block| block[:text] }.join("\n")
+  end
+
   def expect_successful_response(result, expected_stdout: nil)
     expect(result.to_h[:isError]).to be false
     return unless expected_stdout

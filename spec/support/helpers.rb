@@ -31,15 +31,21 @@ module CodeSandboxMcp
     end
 
     def extract_content_by_role(content, role)
-      content.select { |c| c.dig('annotations', 'role') == role }
+      content.select do |c|
+        # Handle both string and symbol keys
+        annotations = c['annotations'] || c[:annotations]
+        next false unless annotations
+
+        (annotations['role'] || annotations[:role]) == role
+      end
     end
 
     def extract_stdout(content)
-      extract_content_by_role(content, 'stdout').map { |c| c['text'] }
+      extract_content_by_role(content, 'stdout').map { |c| c['text'] || c[:text] }.join("\n")
     end
 
     def extract_stderr(content)
-      extract_content_by_role(content, 'stderr').map { |c| c['text'] }
+      extract_content_by_role(content, 'stderr').map { |c| c['text'] || c[:text] }.join("\n")
     end
 
     METADATA_ROLES = %w[metadata result].freeze

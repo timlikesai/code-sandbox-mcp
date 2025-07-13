@@ -95,17 +95,18 @@ RSpec.describe 'Tools Integration' do
   end
 
   describe 'Tool registration' do
-    it 'includes both tools in the ALL constant' do
+    it 'includes all tools in the ALL constant' do
       expect(CodeSandboxMcp::Tools::ALL).to include(
         CodeSandboxMcp::Tools::ExecuteCode,
-        CodeSandboxMcp::Tools::ValidateCode
+        CodeSandboxMcp::Tools::ValidateCode,
+        CodeSandboxMcp::Tools::ResetSession
       )
-      expect(CodeSandboxMcp::Tools::ALL.size).to eq(2)
+      expect(CodeSandboxMcp::Tools::ALL.size).to eq(3)
     end
 
     it 'tools have unique names' do
       names = CodeSandboxMcp::Tools::ALL.map(&:name_value)
-      expect(names).to eq(%w[execute_code validate_code])
+      expect(names).to eq(%w[execute_code validate_code reset_session])
       expect(names.uniq.size).to eq(names.size)
     end
 
@@ -121,16 +122,20 @@ RSpec.describe 'Tools Integration' do
         schema = tool.input_schema_value.to_h
         expect(schema[:type]).to eq('object')
         expect(schema[:properties]).to be_a(Hash)
-        expect(schema[:required]).to be_an(Array)
-        expect(schema[:required]).to include(:language, :code)
+        expect(schema[:required]).to be_an(Array) if schema[:required]
+
+        # Only ExecuteCode and ValidateCode require language and code
+        if [CodeSandboxMcp::Tools::ExecuteCode, CodeSandboxMcp::Tools::ValidateCode].include?(tool)
+          expect(schema[:required]).to include(:language, :code)
+        end
       end
     end
   end
 
   describe 'Error handling consistency' do
     it 'handles executor errors gracefully in both tools' do
-      # Mock the executor to raise an error
-      allow_any_instance_of(CodeSandboxMcp::Executor).to receive(:execute)
+      # Mock the session manager to raise an error
+      allow_any_instance_of(CodeSandboxMcp::SessionManager).to receive(:execute_in_session)
         .and_raise(StandardError, 'Mock error')
 
       execution_result = CodeSandboxMcp::Tools::ExecuteCode.call(

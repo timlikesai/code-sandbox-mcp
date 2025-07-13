@@ -18,54 +18,45 @@ MCP Client → JSON-RPC → Server → StreamingExecutor → Docker Process → 
 
 ## Essential Commands
 
-### Local Development
+### Docker Testing (All tests run in secure containers)
+
 ```bash
-# Install dependencies
-bundle install
-
-# Run all tests locally
-bundle exec rspec                    # Run all tests
-bundle exec rspec spec/path/to/file  # Run specific test
-
-# Run linters and code quality checks
-bundle exec rubocop                   # Run linter
-bundle exec rubocop --autocorrect-all # Auto-fix style issues
-bundle exec bundler-audit check --update # Check for security vulnerabilities
-
-# Run all checks at once
-bundle exec rake                      # Runs tests + all quality checks
-```
-
-### Docker-Based Testing (Recommended)
-```bash
-# Build Docker images
+# Build Docker images (required before running tests)
 docker compose build                  # Build both production and test images
 docker compose build code-sandbox     # Build production image only
 docker compose build code-sandbox-test # Build test image only
 
-# Run tests in Docker (includes all dependencies)
+# Run unit tests
 docker compose run --rm code-sandbox-test bundle exec rspec
+
+# Run code quality checks
 docker compose run --rm code-sandbox-test bundle exec rubocop
 docker compose run --rm code-sandbox-test bundle exec bundler-audit check --update
 
-# Run all tests and checks using Rake
-bundle exec rake docker:test          # Runs full test suite in Docker
+# Run all tests and quality checks at once
+docker compose run --rm code-sandbox-test bundle exec rake
 
 # Interactive shell in test container
-bundle exec rake docker:shell         # Or: docker compose run --rm code-sandbox-test bash
+docker compose run --rm code-sandbox-test bash
 ```
 
-### Testing the Production Image
+### Testing Examples
 ```bash
+# Build and test workflow
+docker compose build
+./examples/test_all_examples.sh
+
+# With verbose output for debugging
+VERBOSE=true ./examples/test_all_examples.sh
+
+# Or run directly with Docker
+docker run --rm -v $PWD/examples:/app/examples:ro ghcr.io/timlikesai/code-sandbox-mcp:latest /app/examples/test_examples_in_container.sh
+
 # Quick smoke test
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 
-# Test code execution
+# Test single example
 cat examples/correct_tool_call.json | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
-
-# Run full example test suite
-./examples/test_examples.sh           # Tests against locally built image
-docker run --rm -v $PWD/examples:/app/examples:ro ghcr.io/timlikesai/code-sandbox-mcp:test-latest /app/examples/test_examples_in_container.sh
 
 # Debug mode - interactive shell
 docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
@@ -86,21 +77,35 @@ docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 
 The server implements three MCP methods:
 1. `initialize` - Returns protocol version and capabilities
-2. `tools/list` - Returns the `execute_code` tool definition
-3. `tools/call` - Executes code and returns streaming results
+2. `tools/list` - Returns all tool definitions (execute_code, validate_code, reset_session)
+3. `tools/call` - Executes the requested tool and returns results
+
+**Available Tools:**
+- `execute_code` - Code execution with automatic session management (stateful by default)
+- `validate_code` - Syntax validation
+- `reset_session` - Reset session for specific language or all languages
 
 **Response Format:**
 - Original code with MIME type
-- Stdout/stderr lines with `streamed: true` annotation
+- Stdout/stderr output
 - Final metadata block with exit code and timing
 
 ## Code Execution Flow
 
-1. **StreamingExecutor** creates a temporary directory
-2. Writes code to a file with appropriate extension
-3. Uses `Open3.popen3` to execute with 30-second timeout
-4. Streams output line-by-line using Ruby threads
-5. Returns structured MCP response with all content blocks
+### Code Execution (execute_code)
+1. **SessionManager** automatically gets or creates session for the language
+2. Maintains history of previous code definitions per language
+3. Prepends relevant history (imports, functions, variables) to new code  
+4. **Executor** executes in session directory, preserving state
+5. Returns structured MCP response with output
+
+### Session Management
+- Each language has its own default session
+- Sessions expire after 1 hour of inactivity
+- Maximum 100 concurrent sessions
+- Each session has isolated filesystem and execution context
+- History filtering preserves only definitions, not output
+- Use `reset_session` tool to clear session state
 
 ## Security Constraints
 
@@ -114,34 +119,57 @@ When executed via Docker, the code runs with:
 
 ## Testing Approach
 
-- Unit tests for each component
+- Unit tests for each component (RSpec)
 - Integration tests for full MCP flow
-- Language-specific execution tests
+- Comprehensive example testing across all languages and features
 - Error condition testing (timeouts, syntax errors, etc.)
 - Coverage requirement: 90% minimum (currently at 99.06%)
 
+### Test Categories
+
+1. **Unit Tests (RSpec)**
+   - `spec/code_sandbox_mcp/server_spec.rb` - MCP protocol tests
+   - `spec/code_sandbox_mcp/streaming_executor_spec.rb` - Streaming execution tests
+   - `spec/code_sandbox_mcp/executor_spec.rb` - Basic execution tests
+   - `spec/integration/mcp_integration_spec.rb` - Full integration tests
+
+2. **Example Integration Tests**
+   - **Basic Examples**: MCP protocol flow, tool calls, error handling
+   - **Language Runtime Tests**: All 12 supported languages (Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish, Java, Kotlin, Scala, Groovy, Clojure)
+   - **Code Validation Tests**: Syntax validation for valid/invalid code
+   - **Session Management Tests**: Stateful execution across multiple calls
+   - **Package Installation Tests**: npm, pip, gem, Maven dependencies (Docker only)
+   - **Multi-File Application Tests**: Complex apps spanning multiple files with cross-references
+
+3. **Test Execution Options**
+   - `./examples/test_all_examples.sh` - Comprehensive test suite (auto-detects Docker/local)
+   - `./examples/test_examples_in_container.sh` - Container-specific tests (used by CI)
+   - `./examples/test_examples.sh` - Legacy wrapper for backward compatibility
+
 ### Test Execution Flow
 
-1. **Setup**: Tests can run locally or in Docker container
+1. **Setup**: All tests run in Docker containers for security
 2. **Coverage**: SimpleCov tracks coverage (writes to `/tmp/coverage` in Docker)
 3. **RSpec**: Runs all specs with randomized order
 4. **Quality Checks**: RuboCop and Bundler Audit run after tests
-5. **Examples**: Integration tests verify real MCP protocol exchanges
-
-### Key Test Files
-- `spec/code_sandbox_mcp/server_spec.rb` - MCP protocol tests
-- `spec/code_sandbox_mcp/streaming_executor_spec.rb` - Streaming execution tests
-- `spec/code_sandbox_mcp/executor_spec.rb` - Basic execution tests
-- `spec/integration/mcp_integration_spec.rb` - Full integration tests
-- `examples/test_examples.sh` - Real-world example validation
+5. **Example Tests**: 40+ integration tests across all features and languages
+6. **Multi-Architecture**: CI tests on both AMD64 and ARM64 platforms
 
 ## Supported Languages
 
 Each language in `LANGUAGES` hash has:
 - `extension` - File extension for the language
 - `command` - Array of command and arguments
+- `mime_type` - MIME type for the language
 
-Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`, `zsh`
+Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`, `zsh`, `java`, `clojure`, `kotlin`, `groovy`, `scala`
+
+### JVM Languages Notes
+- **Java**: Uses Java 21's single-source-file execution feature
+- **Clojure**: Runs directly without compilation
+- **Kotlin**: Uses `.kts` extension for script mode
+- **Groovy**: Executes as scripts without compilation
+- **Scala**: Uses Scala 3 with `@main` annotation for scripts
 
 ## Important Design Decisions
 
@@ -149,8 +177,8 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 - **Alpine Base**: Uses `ruby:3.4.4-alpine` for minimal size and security
 - **Multi-stage Build**: `base` → `builder` → `production` and `test` stages
 - **Multi-Architecture**: Supports both `linux/amd64` and `linux/arm64` platforms
-- **Production Image**: 727MB, contains only runtime files (`lib/`, `bin/`, gems)
-- **Test Image**: 908MB, includes development dependencies and test files
+- **Production Image**: 1.5GB (was 727MB before JVM languages), contains runtime files + JDK + JVM language runtimes
+- **Test Image**: 1.68GB (was 908MB), includes development dependencies and test files
 - **Single Repository**: Both images use `ghcr.io/timlikesai/code-sandbox-mcp`
 - **Tag Prefixes**: Test images use `test-` prefix (e.g., `test-latest`, `test-main`)
 - **Layer Sharing**: Optimized caching between stages and builds
@@ -210,7 +238,7 @@ Current languages: `bash`, `fish`, `javascript`, `python`, `ruby`, `typescript`,
 
 ## Known Limitations & Future Improvements
 
-1. **Language Support**: Some languages (Go, Rust, Java) require compilation steps not yet implemented
+1. **Language Support**: Some languages (Go, Rust, C/C++) require compilation steps not yet implemented
 2. **File System Access**: Currently no persistent storage between executions
 3. **Binary Output**: No support for returning binary data (images, etc.)
 4. **Interactive Input**: No stdin support for interactive programs

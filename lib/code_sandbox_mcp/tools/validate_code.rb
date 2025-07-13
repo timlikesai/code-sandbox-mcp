@@ -7,13 +7,46 @@ module CodeSandboxMcp
   module Tools
     class ValidateCode < Base
       tool_name 'validate_code'
-      description 'Validate code syntax before execution. Returns syntax errors with line numbers when available.'
-      input_schema(common_input_schema)
+      description 'Validate code syntax without execution - fast feedback for errors, types, compilation. ' \
+                  'Returns detailed error messages with line numbers and suggestions. ' \
+                  'Supports all 12 languages with language-specific validation rules. ' \
+                  'Use before execute_code to catch issues early. Can save files to session.'
+      input_schema(
+        type: 'object',
+        properties: {
+          language: {
+            type: 'string',
+            description: 'Programming language for syntax validation. Each language uses appropriate validators.',
+            enum: LANGUAGES.keys
+          },
+          code: {
+            type: 'string',
+            description: 'Source code to validate for syntax errors, type issues, and compilation problems.'
+          },
+          filename: {
+            type: 'string',
+            description: 'Filename for validation context - affects import resolution and language-specific rules.'
+          },
+          save: {
+            type: 'boolean',
+            description: 'Save validated file to session directory after validation for multi-file projects.'
+          },
+          session_id: {
+            type: 'string',
+            description: 'Session ID for saving validated files. Links to execute_code sessions for seamless workflow.'
+          }
+        },
+        required: %w[language code]
+      )
 
       class << self
-        def call(language:, code:)
+        def call(language:, code:, filename: nil, save: false, session_id: nil)
           SyntaxValidator.validate(language, code)
-          success_response
+
+          saved_path = nil
+          saved_path = save_code_to_session(session_id, language, code, filename) if save && session_id
+
+          success_response(language, code, filename, saved_path)
         rescue SyntaxValidator::ValidationError => e
           error_response(e)
         rescue StandardError => e
@@ -22,9 +55,21 @@ module CodeSandboxMcp
 
         private
 
-        def success_response
-          content = [create_content_block('Syntax validation successful', status: 'valid')]
+        def success_response(language, code, filename = nil, saved_path = nil)
+          message = 'Syntax validation successful'
+          message += " for #{filename}" if filename
+          message += " (saved to #{saved_path})" if saved_path
+
+          content = [
+            create_content_block(message, status: 'valid'),
+            create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language))
+          ]
           MCP::Tool::Response.new(content)
+        end
+
+        def save_code_to_session(session_id, language, code, filename)
+          require_relative '../session_manager'
+          SessionManager.instance.save_code_to_session(session_id, language, code, filename)
         end
 
         def error_response(error)

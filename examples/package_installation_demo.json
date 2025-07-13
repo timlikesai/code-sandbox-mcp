@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "bash",
+      "code": "# Demonstrate safe package installation in container\necho '=== Installing npm package ==='\nnpm install cowsay\n\necho ''\necho '=== Package installed locally ==='\nls -la node_modules/ | head -5\n\necho ''\necho '=== Using installed package ==='\nnode -e \"const cowsay = require('cowsay'); console.log(cowsay.say({text: 'Container packages are safe!', cow: 'dragon'}));\""
+    }
+  }
+}

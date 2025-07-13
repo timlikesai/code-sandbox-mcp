@@ -4,14 +4,16 @@ A secure Docker-based MCP server for executing code in multiple languages, imple
 
 ## Features
 
-- **7 Supported Languages**: Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish
+- **12 Supported Languages**: Python, JavaScript, TypeScript, Ruby, Bash, Zsh, Fish, Java, Clojure, Kotlin, Groovy, Scala
 - **Secure Execution**: Runs in Docker with strict resource limits
-- **Alpine Linux**: Optimized 727MB production image (38% smaller than Debian)
+- **Alpine Linux**: Optimized 978MB production image with JVM support
 - **Multi-stage Build**: Separate optimized images for production and testing
-- **Ruby 3.4**: Uses latest stable Ruby version
-- **Real-time Streaming**: Live output streaming with MCP protocol compliance
+- **Ruby 3.4 + JDK 21**: Latest stable Ruby with modern Java runtime
+- **Output Capture**: Complete output capture with MCP protocol compliance
 - **Full MCP Protocol**: Implements Model Context Protocol for tool calling
-- **Comprehensive Testing**: RSpec test suite with 99%+ coverage
+- **Comprehensive Testing**: RSpec test suite with 97.6% coverage
+- **Automatic Session Management**: State persists between executions for each language
+- **Session Reset Tool**: Clear language sessions when needed
 
 ## Installation
 
@@ -46,16 +48,24 @@ Add this configuration to:
   "mcpServers": {
     "code-sandbox": {
       "command": "docker",
-      "args": ["run", "--rm", "--interactive", "ghcr.io/timlikesai/code-sandbox-mcp:latest"]
+      "args": [
+        "run", "--rm", "--interactive",
+        "--network", "none",
+        "ghcr.io/timlikesai/code-sandbox-mcp:latest"
+      ]
     }
   }
 }
 ```
 
+**Note**: The `--network none` flag is a Docker CLI option that disables all network access for security. The container itself supports networking - this flag prevents it.
+
 **Claude Code CLI**: You can also add via command line:
 ```bash
-claude mcp add code-sandbox -- docker run --rm --interactive ghcr.io/timlikesai/code-sandbox-mcp:latest
+claude mcp add code-sandbox -- docker run --rm --interactive --network none ghcr.io/timlikesai/code-sandbox-mcp:latest
 ```
+
+**Security Note**: We recommend the `--network none` flag to disable network access for safety.
 
 ### Advanced Configuration (Optional)
 
@@ -83,310 +93,178 @@ For additional security hardening:
 }
 ```
 
-### Testing the Setup
+### Enabling Network Access (When Needed)
 
-Test the Docker container directly:
+**About Network Access**: The container supports networking, but we recommend using Docker's `--network none` flag to disable it for security.
+
+**⚠️ Security Recommendation**: Use `--network none` to prevent code from accessing the internet, your local network, or making external API calls.
+
+**To enable network access when needed, remove the `--network none` flag:**
+
+```json
+{
+  "mcpServers": {
+    "code-sandbox": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "--interactive",
+        "--network", "none",
+        "ghcr.io/timlikesai/code-sandbox-mcp:latest"
+      ]
+    },
+    "code-sandbox-network": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "--interactive",
+        "ghcr.io/timlikesai/code-sandbox-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+**Use cases that require network access**:
+- API calls (`requests.get()`, `fetch()`, `curl`)
+- Package installation (`pip install`, `npm install`)
+- Data downloading or web scraping
+- External service integration
+- Installing libraries for data science, web frameworks, etc.
+
+**Container-Level Package Security**:
+- ✅ **Ephemeral Installs**: Packages install within the container's temporary filesystem
+- ✅ **No Host Persistence**: Nothing survives container restart
+- ✅ **Session Sharing**: Installed packages available across all languages in the same container session
+- ✅ **Clean Slate**: Each new container starts fresh with no previous installations
+- ✅ **Resource Bounded**: All installs subject to container memory/disk limits
+
+**Docker Network Security**:
+- `--network none`: Complete network isolation (recommended for untrusted code)
+- No `--network` flag: Full network access (safe for development/experimentation)
+- The container provides strong isolation boundaries regardless of network settings
+
+
+## Usage
+
+### Available Tools
+
+1. **execute_code** - Execute code with automatic session management
+2. **validate_code** - Validate syntax without execution  
+3. **reset_session** - Reset sessions for specific languages or all languages
+
+### Session Management
+
+Code execution is stateful by default. Each language maintains its own isolated session with:
+- Variables and their values
+- Function/class definitions  
+- Imported modules
+- Execution history
+
+Sessions expire after 1 hour of inactivity.
+
+### Quick Test
 
 ```bash
-# Quick test
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"print(\"Hello World!\")"}}}' | docker run --rm --interactive ghcr.io/timlikesai/code-sandbox-mcp:latest
+# Test execution (with network disabled)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"print(\"Hello World!\")"}}}' | docker run --rm -i --network none ghcr.io/timlikesai/code-sandbox-mcp:latest
+
+# Test with network access and package installation
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_code","arguments":{"language":"python","code":"import subprocess; subprocess.run([\"pip\", \"install\", \"requests\"]); import requests; print(requests.get(\"https://httpbin.org/ip\").json())"}}}' | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
+
+# Debug mode
+docker run --rm -it --network none ghcr.io/timlikesai/code-sandbox-mcp:latest bash
+```
+
+## Security
+
+Multiple layers of container security:
+- **Container Isolation** with resource limits (512MB memory, 0.5 CPU)
+- **Ephemeral Filesystem** - nothing persists after container stops
+- **Package Installation Safety** - packages install in container temp space only
+- **Network Isolation** (configurable via Docker's `--network none` flag)
+- **Read-only Root Filesystem** with writable `/tmp` only  
+- **No Privileges** (`--security-opt no-new-privileges`, `--cap-drop ALL`)
+- **Non-root User** (executes as `sandbox` user)
+- **Auto-cleanup** (`--rm` removes containers after execution)
+- **Configurable Timeout** (default 30s via `EXECUTION_TIMEOUT`)
+
+**Package Installation Security**: When network access is enabled, users can install packages (`pip install`, `npm install`, etc.) safely within the container. All installations are ephemeral and don't affect the host system or persist between container restarts.
+
+## Examples
+
+See [examples/README.md](examples/README.md) for comprehensive examples including:
+- JSON examples for all 12 languages
+- MCP protocol demonstrations
+- Session management patterns
+- Error handling
+- Response format documentation
+
+## Testing
+
+All tests run in Docker containers for security and consistency.
+
+### Quick Start
+
+```bash
+# Build the Docker images
+docker compose build
+
+# Run all tests (unit tests + example integration tests)
+./examples/test_all_examples.sh
+
+# With verbose output
+VERBOSE=true ./examples/test_all_examples.sh
+```
+
+### Docker Commands
+
+```bash
+# Build test image
+docker compose build code-sandbox-test
+
+# Run unit tests
+docker compose run --rm code-sandbox-test bundle exec rspec
+
+# Run code quality checks
+docker compose run --rm code-sandbox-test bundle exec rubocop
+docker compose run --rm code-sandbox-test bundle exec bundler-audit check --update
+
+# Run all checks at once
+docker compose run --rm code-sandbox-test bundle exec rake
+
+# Interactive shell in test container
+docker compose run --rm code-sandbox-test bash
+```
+
+### Testing Examples
+
+```bash
+# Test all examples (same as CI) - uses production image
+docker run --rm -v $PWD/examples:/app/examples:ro ghcr.io/timlikesai/code-sandbox-mcp:latest /app/examples/test_examples_in_container.sh
+
+# Test single example
+cat examples/correct_tool_call.json | docker run --rm -i ghcr.io/timlikesai/code-sandbox-mcp:latest
 
 # Debug mode
 docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
 ```
 
-## Usage
-
-The server exposes one tool: `execute_code`
-
-Output is automatically collected and streamed internally, providing real-time execution while maintaining MCP protocol compatibility.
-
-### Example Request:
-```json
-{
-  "tool": "execute_code",
-  "arguments": {
-    "language": "python",
-    "code": "print('Hello, World!')"
-  }
-}
-```
-
-### Response Format (MCP Standard):
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "print('Hello, World!')",
-      "mimeType": "text/x-python"
-    },
-    {
-      "type": "text",
-      "text": "Hello, World!",
-      "annotations": {
-        "role": "stdout"
-      }
-    },
-    {
-      "type": "text",
-      "text": "{\"exitCode\": 0, \"executionTime\": \"45ms\", \"language\": \"python\", \"timestamp\": \"2024-01-12T10:30:45Z\"}",
-      "mimeType": "application/json",
-      "annotations": {
-        "role": "metadata"
-      }
-    }
-  ],
-  "isError": false
-}
-```
-
-### Content Structure:
-- **Code**: Original source code with appropriate MIME type
-- **stdout**: Standard output with `role: stdout` annotation
-- **stderr**: Error output with `role: stderr` annotation (if any)
-- **metadata**: JSON-formatted execution details
-
-### Error Response:
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Execution failed: undefined method...",
-      "annotations": {
-        "role": "error"
-      }
-    },
-    {
-      "type": "text",
-      "text": "{\"exitCode\": -1, \"executionTime\": \"12ms\", ...}",
-      "mimeType": "application/json",
-      "annotations": {
-        "role": "metadata"
-      }
-    }
-  ],
-  "isError": true
-}
-```
-
-### Long-Running Process Example:
-```json
-{
-  "tool": "execute_code",
-  "arguments": {
-    "language": "python",
-    "code": "for i in range(5):\n    print(f'Step {i}')\n    import time; time.sleep(1)"
-  }
-}
-```
-
-The server internally streams output as it's produced, then returns all content in the response:
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "for i in range(5):\n    print(f'Step {i}')\n    import time; time.sleep(1)",
-      "mimeType": "text/x-python"
-    },
-    {
-      "type": "text",
-      "text": "Step 0",
-      "annotations": {"role": "stdout", "streamed": true}
-    },
-    {
-      "type": "text",
-      "text": "Step 1",
-      "annotations": {"role": "stdout", "streamed": true}
-    },
-    {
-      "type": "text",
-      "text": "Step 2",
-      "annotations": {"role": "stdout", "streamed": true}
-    },
-    {
-      "type": "text",
-      "text": "Step 3",
-      "annotations": {"role": "stdout", "streamed": true}
-    },
-    {
-      "type": "text",
-      "text": "Step 4",
-      "annotations": {"role": "stdout", "streamed": true}
-    },
-    {
-      "type": "text",
-      "text": "{\"exitCode\": 0, \"outputLines\": 5, ...}",
-      "mimeType": "application/json",
-      "annotations": {"role": "metadata", "final": true}
-    }
-  ],
-  "isError": false
-}
-```
-
-## Security
-
-The Docker container provides multiple layers of security:
-
-- **Container Isolation**: Each execution runs in its own container
-- **Resource Limits**: 512MB memory, 0.5 CPU limits
-- **Network Disabled**: `--network none` - no internet access
-- **Read-only Filesystem**: `--read-only` with writable `/tmp` and `/app/tmp` only
-- **No Privileges**: `--security-opt no-new-privileges` and `--cap-drop ALL`
-- **Non-root User**: Executes as unprivileged `sandbox` user inside container
-- **Auto-cleanup**: `--rm` removes containers after execution
-- **Configurable Timeout**: Code execution timeout (default 30s, configurable via `EXECUTION_TIMEOUT`)
-
-### Security Options Explained
-
-```bash
---read-only                      # Root filesystem cannot be modified
---tmpfs /tmp                     # In-memory temporary directory
---tmpfs /app/tmp                 # In-memory app temporary directory
---memory 512m                    # Limit memory usage
---cpus 0.5                       # Limit CPU usage to 50%
---network none                   # No network access
---security-opt no-new-privileges # Prevent privilege escalation
---cap-drop ALL                   # Remove all Linux capabilities
---rm                             # Auto-remove container after use
--e EXECUTION_TIMEOUT=30          # Code execution timeout (seconds)
-```
-
-### Environment Variables
-
-The container supports these environment variables:
-
-- `EXECUTION_TIMEOUT` - Code execution timeout in seconds (default: 30)
-- `WORKDIR` - Working directory inside container (default: /app)
-
-## Examples
-
-The `examples/` directory contains comprehensive examples demonstrating:
-- Complete MCP protocol flow
-- Code execution in all supported languages
-- Streaming output patterns
-- Error handling
-- Client usage patterns
-
-See [examples/README.md](examples/README.md) for detailed documentation.
-
-## Development
-
-### Local Development
-
-```bash
-# Install dependencies locally
-bundle install
-
-# Run tests
-bundle exec rspec
-
-# Run linter
-bundle exec rubocop
-bundle exec rubocop --autocorrect-all  # Auto-fix style issues
-
-# Security checks
-bundle exec bundler-audit check        # Check for dependency vulnerabilities
-
-# Run all checks
-bundle exec rake
-```
-
-### Docker-based Testing (Recommended)
-
-Test in the actual deployment environment with all supported languages:
-
-```bash
-# Run all tests in Docker container
-bundle exec rake docker:test
-
-# Build Docker images
-bundle exec rake docker:build          # Build production image
-bundle exec rake docker:build_test     # Build test image
-bundle exec rake docker:build_all      # Build both images
-
-# Interactive shell in test environment
-bundle exec rake docker:shell
-
-# Or run individual commands:
-docker compose run --rm code-sandbox-test bundle exec rspec
-docker compose run --rm code-sandbox-test bundle exec rubocop
-docker compose run --rm code-sandbox-test bundle exec bundler-audit check
-```
-
-### Other Development Tasks
-
-```bash
-# Test examples
-./examples/test_examples.sh
-
-# Test Docker container
-docker run --rm -it ghcr.io/timlikesai/code-sandbox-mcp:latest bash
-```
-
-### Code Quality Tools
-
-This project uses several tools to maintain code quality and security:
-
-- **RuboCop**: Ruby style guide enforcement with custom configuration
-  - Includes `rubocop-performance` for performance optimizations
-- **Bundler Audit**: Checks dependencies for known security vulnerabilities
-  - Run with `--update` flag to update vulnerability database
-
-### GitHub Actions
-
-Continuous integration runs automatically on all pushes and pull requests:
-
-- **CI Pipeline**: Tests on Ruby 3.4, RuboCop, Security audit
-- **Docker Build**: Builds and tests Docker image with caching
-- **Integration Tests**: Runs example scripts against built Docker image
-- **CodeQL Analysis**: Weekly security code scanning
-- **Dependency Review**: Automatically reviews dependency changes in PRs
-- **Release Automation**: Builds and publishes Docker images on tagged releases
-
 ## Architecture
 
-This project uses a multi-stage Docker build for optimal performance and security:
+**Multi-stage Docker Build**:
+- **Production**: 978MB Alpine-based image with all 12 languages
+- **Test**: 1.68GB with development dependencies
+- **Builder**: Intermediate stage for gem compilation
 
-### Docker Images
-- **Production Image**: Alpine-based, 727MB, contains only runtime dependencies
-- **Test Image**: 908MB, includes development dependencies and test files
-- **Builder Stage**: Intermediate stage for gem compilation and optimization
+**Key Components**:
+- `server.rb` - MCP protocol (JSON-RPC)
+- `streaming_executor.rb` - Code execution with output capture
+- `executor.rb` - Core execution engine
+- `languages.rb` - Language configurations
 
-### Components
-- `lib/code_sandbox_mcp/server.rb` - MCP protocol implementation with JSON-RPC handling
-- `lib/code_sandbox_mcp/streaming_executor.rb` - Real-time streaming code execution
-- `lib/code_sandbox_mcp/executor.rb` - Basic code execution engine
-- `lib/code_sandbox_mcp/languages.rb` - Language configurations and MIME types
-- `bin/code-sandbox-mcp` - Executable entry point
-- `examples/` - Usage examples and integration tests
-
-### Build Optimizations
-- **Multi-stage build**: Separates gem compilation from runtime
-- **Layer caching**: Optimized for CI/CD with GitHub Actions cache
-- **Alpine base**: Minimal attack surface and smaller image size
-- **Production filtering**: Only essential files included in production image
-
-## Performance
-
-### Image Sizes
-- **Production**: 727MB (Alpine-based, 38% smaller than Debian equivalent)
-- **Test**: 908MB (includes development dependencies)
-- **Download time**: ~30-60 seconds on typical broadband
-
-### Execution Performance
-- **Cold start**: ~1-2 seconds (container startup + Ruby initialization)
-- **Warm execution**: ~50-200ms per code execution
-- **Memory usage**: <100MB typical, 512MB limit
-- **CPU usage**: <50% limit, actual usage varies by code complexity
-
-### Caching Benefits
-- **Layer reuse**: Shared base layers between production and test images
-- **CI optimization**: GitHub Actions cache reduces build time by 60-80%
-- **Registry efficiency**: Alpine layers compress well for faster pulls
+**Performance**:
+- Cold start: ~1-2 seconds
+- Execution: ~50-200ms per request
+- Memory: <100MB typical, 512MB limit
 
 ## License
 

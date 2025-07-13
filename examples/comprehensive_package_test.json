@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "execute_code",
+    "arguments": {
+      "language": "bash",
+      "code": "# Comprehensive Package Installation Test Across All Languages\necho '================================'\necho 'COMPREHENSIVE PACKAGE INSTALLATION TEST'\necho '================================'\necho ''\n\n# Test 1: Python packages\necho '=== 1. PYTHON PACKAGES ==='\npip install --quiet requests colorama\necho 'Installed: requests, colorama'\necho ''\n\n# Test 2: Node.js packages  \necho '=== 2. NODE.JS PACKAGES ==='\nnpm install --silent axios chalk\necho 'Installed: axios, chalk'\necho ''\n\n# Test 3: Ruby gems (user-level install)\necho '=== 3. RUBY GEMS ==='\ngem install --user-install json httparty --no-document 2>/dev/null || echo 'Ruby gems install attempted'\necho 'Attempted: json, httparty'\necho ''\n\n# Test 4: Check installed locations\necho '=== 4. INSTALLATION LOCATIONS ==='\necho 'Python packages:'\npip list | grep -E '(requests|colorama)' || echo 'Python packages not found in pip list'\necho ''\necho 'Node.js packages:'\nls node_modules/ 2>/dev/null | grep -E '(axios|chalk)' || echo 'Node packages not found'\necho ''\necho 'Ruby gems:'\ngem list | grep -E '(json|httparty)' || echo 'Ruby gems not found in gem list'\necho ''\n\n# Test 5: Verify package functionality\necho '=== 5. PACKAGE FUNCTIONALITY TEST ==='\necho 'Testing Python requests...'\npython3 -c \"import requests; print('✓ Python requests works')\" 2>/dev/null || echo '✗ Python requests failed'\necho ''\necho 'Testing Node.js axios...'\nnode -e \"const axios = require('axios'); console.log('✓ Node.js axios works');\" 2>/dev/null || echo '✗ Node.js axios failed'\necho ''\n\necho '=== SUMMARY ==='\necho 'All packages installed in container temporary space'\necho 'Container restart = clean slate'\necho 'Host system remains unaffected'"
+    }
+  }
+}

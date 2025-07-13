@@ -1,0 +1,62 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "python",
+        "filename": "models.py",
+        "save": true,
+        "session_id": "python-webapp",
+        "code": "# Data models for our Python web application\nfrom dataclasses import dataclass\nfrom typing import List, Optional\nimport json\n\n@dataclass\nclass User:\n    id: int\n    username: str\n    email: str\n    active: bool = True\n    \n    def to_dict(self):\n        return {\n            'id': self.id,\n            'username': self.username,\n            'email': self.email,\n            'active': self.active\n        }\n    \n    @classmethod\n    def from_dict(cls, data):\n        return cls(**data)\n\n@dataclass\nclass Post:\n    id: int\n    title: str\n    content: str\n    author_id: int\n    published: bool = False\n    \n    def to_dict(self):\n        return {\n            'id': self.id,\n            'title': self.title,\n            'content': self.content,\n            'author_id': self.author_id,\n            'published': self.published\n        }\n\nclass Database:\n    def __init__(self):\n        self.users = {}\n        self.posts = {}\n        self.next_user_id = 1\n        self.next_post_id = 1\n    \n    def create_user(self, username: str, email: str) -> User:\n        user = User(self.next_user_id, username, email)\n        self.users[user.id] = user\n        self.next_user_id += 1\n        return user\n    \n    def get_user(self, user_id: int) -> Optional[User]:\n        return self.users.get(user_id)\n    \n    def create_post(self, title: str, content: str, author_id: int) -> Post:\n        post = Post(self.next_post_id, title, content, author_id)\n        self.posts[post.id] = post\n        self.next_post_id += 1\n        return post\n    \n    def get_posts_by_author(self, author_id: int) -> List[Post]:\n        return [post for post in self.posts.values() if post.author_id == author_id]\n\nprint('✓ models.py validated and saved')"
+      }
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "python",
+        "filename": "utils.py",
+        "save": true,
+        "session_id": "python-webapp",
+        "code": "# Utility functions for our Python web application\nimport json\nimport hashlib\nfrom typing import Dict, Any\nfrom datetime import datetime\n\ndef hash_password(password: str) -> str:\n    \"\"\"Simple password hashing (not for production!)\"\"\"\n    return hashlib.sha256(password.encode()).hexdigest()\n\ndef verify_password(password: str, hashed: str) -> bool:\n    \"\"\"Verify a password against its hash\"\"\"\n    return hash_password(password) == hashed\n\ndef format_timestamp(dt: datetime = None) -> str:\n    \"\"\"Format a datetime as ISO string\"\"\"\n    if dt is None:\n        dt = datetime.now()\n    return dt.isoformat()\n\ndef validate_email(email: str) -> bool:\n    \"\"\"Basic email validation\"\"\"\n    return '@' in email and '.' in email.split('@')[1]\n\ndef sanitize_input(text: str, max_length: int = 1000) -> str:\n    \"\"\"Basic input sanitization\"\"\"\n    return text.strip()[:max_length]\n\ndef json_response(data: Dict[str, Any], status: str = 'success') -> str:\n    \"\"\"Create a JSON response\"\"\"\n    response = {\n        'status': status,\n        'timestamp': format_timestamp(),\n        'data': data\n    }\n    return json.dumps(response, indent=2)\n\ndef error_response(message: str, code: str = 'error') -> str:\n    \"\"\"Create an error JSON response\"\"\"\n    return json_response({'error': message, 'code': code}, status='error')\n\nclass Logger:\n    def __init__(self, name: str):\n        self.name = name\n    \n    def info(self, message: str):\n        print(f\"[{format_timestamp()}] {self.name} INFO: {message}\")\n    \n    def error(self, message: str):\n        print(f\"[{format_timestamp()}] {self.name} ERROR: {message}\")\n    \n    def debug(self, message: str):\n        print(f\"[{format_timestamp()}] {self.name} DEBUG: {message}\")\n\nprint('✓ utils.py validated and saved')"
+      }
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "python",
+        "filename": "api.py",
+        "save": true,
+        "session_id": "python-webapp",
+        "code": "# API handlers for our Python web application\nfrom models import Database, User, Post\nfrom utils import validate_email, sanitize_input, json_response, error_response, Logger\nfrom typing import Dict, Any\n\nclass UserAPI:\n    def __init__(self, db: Database):\n        self.db = db\n        self.logger = Logger('UserAPI')\n    \n    def create_user(self, data: Dict[str, Any]) -> str:\n        \"\"\"Create a new user\"\"\"\n        try:\n            username = sanitize_input(data.get('username', ''))\n            email = sanitize_input(data.get('email', ''))\n            \n            if not username or not email:\n                return error_response('Username and email are required')\n            \n            if not validate_email(email):\n                return error_response('Invalid email format')\n            \n            user = self.db.create_user(username, email)\n            self.logger.info(f'Created user: {username}')\n            \n            return json_response(user.to_dict())\n        \n        except Exception as e:\n            self.logger.error(f'Failed to create user: {e}')\n            return error_response('Failed to create user')\n    \n    def get_user(self, user_id: int) -> str:\n        \"\"\"Get user by ID\"\"\"\n        user = self.db.get_user(user_id)\n        if user:\n            return json_response(user.to_dict())\n        return error_response('User not found', 'not_found')\n\nclass PostAPI:\n    def __init__(self, db: Database):\n        self.db = db\n        self.logger = Logger('PostAPI')\n    \n    def create_post(self, data: Dict[str, Any]) -> str:\n        \"\"\"Create a new post\"\"\"\n        try:\n            title = sanitize_input(data.get('title', ''))\n            content = sanitize_input(data.get('content', ''), max_length=5000)\n            author_id = data.get('author_id')\n            \n            if not title or not content or not author_id:\n                return error_response('Title, content, and author_id are required')\n            \n            # Verify author exists\n            if not self.db.get_user(author_id):\n                return error_response('Author not found')\n            \n            post = self.db.create_post(title, content, author_id)\n            self.logger.info(f'Created post: {title}')\n            \n            return json_response(post.to_dict())\n        \n        except Exception as e:\n            self.logger.error(f'Failed to create post: {e}')\n            return error_response('Failed to create post')\n    \n    def get_user_posts(self, author_id: int) -> str:\n        \"\"\"Get all posts by a user\"\"\"\n        posts = self.db.get_posts_by_author(author_id)\n        posts_data = [post.to_dict() for post in posts]\n        return json_response({'posts': posts_data, 'count': len(posts_data)})\n\nprint('✓ api.py validated and saved')"
+      }
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "execute_code",
+      "arguments": {
+        "language": "python",
+        "filename": "main.py",
+        "save": true,
+        "session_id": "python-webapp",
+        "code": "#!/usr/bin/env python3\n# Main application runner\n\nprint('=== MULTI-FILE PYTHON WEB APPLICATION DEMO ===')\nprint()\n\n# Import our custom modules (they should be available in the session)\ntry:\n    from models import Database, User, Post\n    from utils import Logger, json_response\n    from api import UserAPI, PostAPI\n    print('✓ All modules imported successfully')\nexcept ImportError as e:\n    print(f'✗ Module import failed: {e}')\n    print('Make sure all files were saved to the session')\n    exit(1)\n\nprint()\nprint('=== INITIALIZING APPLICATION ===')\n\n# Create database and APIs\ndb = Database()\nuser_api = UserAPI(db)\npost_api = PostAPI(db)\nlogger = Logger('MainApp')\n\nlogger.info('Application initialized')\n\nprint()\nprint('=== TESTING USER CREATION ===')\n\n# Create some users\nuser1_response = user_api.create_user({\n    'username': 'alice',\n    'email': 'alice@example.com'\n})\nprint('User 1 created:')\nprint(user1_response)\n\nuser2_response = user_api.create_user({\n    'username': 'bob',\n    'email': 'bob@example.com'\n})\nprint('\\nUser 2 created:')\nprint(user2_response)\n\nprint()\nprint('=== TESTING POST CREATION ===')\n\n# Create some posts\npost1_response = post_api.create_post({\n    'title': 'My First Post',\n    'content': 'This is the content of my first post. Hello world!',\n    'author_id': 1\n})\nprint('Post 1 created:')\nprint(post1_response)\n\npost2_response = post_api.create_post({\n    'title': 'Python is Awesome',\n    'content': 'I love coding in Python. It\\'s so clean and readable!',\n    'author_id': 1\n})\nprint('\\nPost 2 created:')\nprint(post2_response)\n\npost3_response = post_api.create_post({\n    'title': 'Learning Docker',\n    'content': 'Docker containers make development so much easier.',\n    'author_id': 2\n})\nprint('\\nPost 3 created:')\nprint(post3_response)\n\nprint()\nprint('=== TESTING DATA RETRIEVAL ===')\n\n# Get user posts\nalice_posts = post_api.get_user_posts(1)\nprint('Alice\\'s posts:')\nprint(alice_posts)\n\nbob_posts = post_api.get_user_posts(2)\nprint('\\nBob\\'s posts:')\nprint(bob_posts)\n\nprint()\nprint('=== TESTING ERROR HANDLING ===')\n\n# Test invalid user creation\ninvalid_user = user_api.create_user({\n    'username': '',\n    'email': 'invalid-email'\n})\nprint('Invalid user creation:')\nprint(invalid_user)\n\n# Test post creation with non-existent author\ninvalid_post = post_api.create_post({\n    'title': 'Invalid Post',\n    'content': 'This should fail',\n    'author_id': 999\n})\nprint('\\nInvalid post creation:')\nprint(invalid_post)\n\nprint()\nprint('=== APPLICATION SUMMARY ===')\nprint(f'Total users: {len(db.users)}')\nprint(f'Total posts: {len(db.posts)}')\nprint('\\n✅ Multi-file Python application demo completed!')\nprint('\\n🔄 All files persist within this container session')\nprint('🗑️  Files will be cleaned up when container restarts')\nprint('🔒 Host system remains completely isolated')"
+      }
+    }
+  }
+]

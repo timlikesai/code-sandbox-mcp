@@ -1,0 +1,249 @@
+[
+  {
+    "description": "Python valid syntax",
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "python",
+        "code": "def greet(name):\n    return f'Hello, {name}!'\n\nprint(greet('World'))"
+      }
+    }
+  },
+  {
+    "description": "Python invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "python",
+        "code": "def greet(name)\n    return f'Hello, {name}!'"
+      }
+    }
+  },
+  {
+    "description": "JavaScript valid syntax",
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "javascript",
+        "code": "const greet = (name) => {\n    return `Hello, ${name}!`;\n};\nconsole.log(greet('World'));"
+      }
+    }
+  },
+  {
+    "description": "JavaScript invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "javascript",
+        "code": "const greet = (name) => {\n    return `Hello, ${name}!`\n};\nconsole.log(greet('World')"
+      }
+    }
+  },
+  {
+    "description": "TypeScript valid syntax",
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "typescript",
+        "code": "function greet(name: string): string {\n    return `Hello, ${name}!`;\n}\nconsole.log(greet('World'));"
+      }
+    }
+  },
+  {
+    "description": "Ruby valid syntax",
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "ruby",
+        "code": "def greet(name)\n  \"Hello, #{name}!\"\nend\n\nputs greet('World')"
+      }
+    }
+  },
+  {
+    "description": "Ruby invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "ruby",
+        "code": "def greet(name)\n  \"Hello, #{name}!\"\nend\n\nputs greet('World'"
+      }
+    }
+  },
+  {
+    "description": "Java valid syntax",
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "java",
+        "code": "public class Hello {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}"
+      }
+    }
+  },
+  {
+    "description": "Java invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 9,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "java",
+        "code": "public class Hello {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\")\n    }\n}"
+      }
+    }
+  },
+  {
+    "description": "Kotlin valid syntax",
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "kotlin",
+        "code": "fun main() {\n    println(\"Hello, World!\")\n}"
+      }
+    }
+  },
+  {
+    "description": "Scala valid syntax",
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "scala",
+        "code": "object Hello {\n  def main(args: Array[String]): Unit = {\n    println(\"Hello, World!\")\n  }\n}"
+      }
+    }
+  },
+  {
+    "description": "Groovy valid syntax",
+    "jsonrpc": "2.0",
+    "id": 12,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "groovy",
+        "code": "def greet(name) {\n    \"Hello, ${name}!\"\n}\n\nprintln greet('World')"
+      }
+    }
+  },
+  {
+    "description": "Clojure valid syntax",
+    "jsonrpc": "2.0",
+    "id": 13,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "clojure",
+        "code": "(defn greet [name]\n  (str \"Hello, \" name \"!\"))\n\n(println (greet \"World\"))"
+      }
+    }
+  },
+  {
+    "description": "Clojure invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 14,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "clojure",
+        "code": "(defn greet [name]\n  (str \"Hello, \" name \"!\")\n\n(println (greet \"World\"))"
+      }
+    }
+  },
+  {
+    "description": "Bash valid syntax",
+    "jsonrpc": "2.0",
+    "id": 15,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "bash",
+        "code": "#!/bin/bash\ngreet() {\n    echo \"Hello, $1!\"\n}\ngreet \"World\""
+      }
+    }
+  },
+  {
+    "description": "Bash invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 16,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "bash",
+        "code": "#!/bin/bash\ngreet() {\n    echo \"Hello, $1!\"\n\ngreet \"World\""
+      }
+    }
+  },
+  {
+    "description": "Zsh valid syntax",
+    "jsonrpc": "2.0",
+    "id": 17,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "zsh",
+        "code": "#!/bin/zsh\ngreet() {\n    echo \"Hello, $1!\"\n}\ngreet \"World\""
+      }
+    }
+  },
+  {
+    "description": "Fish valid syntax",
+    "jsonrpc": "2.0",
+    "id": 18,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "fish",
+        "code": "function greet\n    echo \"Hello, $argv[1]!\"\nend\ngreet \"World\""
+      }
+    }
+  },
+  {
+    "description": "Fish invalid syntax",
+    "jsonrpc": "2.0",
+    "id": 19,
+    "method": "tools/call",
+    "params": {
+      "name": "validate_code",
+      "arguments": {
+        "language": "fish",
+        "code": "function greet\n    echo \"Hello, $argv[1]!\"\ngreet \"World\""
+      }
+    }
+  }
+]
