@@ -79,7 +79,6 @@ RSpec.describe CodeSandboxMcp::SessionManager do
       )
       expect(result2.exit_code).to eq(0)
 
-      # Print the counter
       result3 = session_manager.execute_in_session(
         session_id, 'python', 'print(counter)', executor
       )
@@ -91,7 +90,6 @@ RSpec.describe CodeSandboxMcp::SessionManager do
       )
       expect(result4.exit_code).to eq(0)
 
-      # Print again
       result5 = session_manager.execute_in_session(
         session_id, 'python', 'print(counter)', executor
       )

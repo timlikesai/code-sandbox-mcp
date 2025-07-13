@@ -11,8 +11,7 @@ module CodeSandboxMcp
     ExecutionResult = Struct.new(:output, :error, :exit_code, :execution_time, keyword_init: true)
 
     def execute(language, code)
-      lang_config = LANGUAGES[language]
-      raise ArgumentError, "Unsupported language: #{language}" unless lang_config
+      lang_config = validate_language!(language)
 
       Dir.mktmpdir("code-sandbox-#{SecureRandom.hex(8)}") do |temp_dir|
         file_path = File.join(temp_dir, "main#{lang_config[:extension]}")
@@ -23,8 +22,7 @@ module CodeSandboxMcp
     end
 
     def execute_with_dir(language, code, working_dir)
-      lang_config = LANGUAGES[language]
-      raise ArgumentError, "Unsupported language: #{language}" unless lang_config
+      lang_config = validate_language!(language)
 
       file_path = File.join(working_dir, "main#{lang_config[:extension]}")
       File.write(file_path, code)
@@ -33,6 +31,13 @@ module CodeSandboxMcp
     end
 
     private
+
+    def validate_language!(language)
+      lang_config = LANGUAGES[language]
+      raise ArgumentError, "Unsupported language: #{language}" unless lang_config
+
+      lang_config
+    end
 
     def execute_command(command, file_path, working_dir)
       output = ''
@@ -65,10 +70,14 @@ module CodeSandboxMcp
       Time.now - start_time
     end
 
+    def clean_output(output)
+      output.to_s.strip
+    end
+
     def build_success_result(output, error, exit_code, execution_time)
       ExecutionResult.new(
-        output: output.strip,
-        error: error.strip,
+        output: clean_output(output),
+        error: clean_output(error),
         exit_code: exit_code,
         execution_time: execution_time
       )
@@ -76,7 +85,7 @@ module CodeSandboxMcp
 
     def build_timeout_result(output, execution_time)
       ExecutionResult.new(
-        output: output.strip,
+        output: clean_output(output),
         error: 'Execution timeout exceeded',
         exit_code: -1,
         execution_time: execution_time

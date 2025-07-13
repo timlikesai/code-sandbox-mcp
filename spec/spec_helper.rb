@@ -57,10 +57,6 @@ RSpec.configure do |config|
   config.warnings = true
   config.disable_monkey_patching!
 
-  config.before(:suite) do
-    # Clean state initialized
-  end
-
   config.after do
     Timecop.return
   end

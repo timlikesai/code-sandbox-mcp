@@ -100,16 +100,12 @@ module CodeSandboxMcp
         session[:execution_count] += 1
       end
 
-      # Create history file for the session
       history_file = File.join(session[:directory], ".session_history_#{language}")
 
-      # For interpreted languages, prepend history
       prepared_code = prepare_code_with_history(language, code, history_file)
 
-      # Execute in the session directory
       result = executor.execute_with_dir(language, prepared_code, session[:directory])
 
-      # Save successful execution to history
       append_to_history(history_file, code, language) if result.exit_code.zero?
 
       result

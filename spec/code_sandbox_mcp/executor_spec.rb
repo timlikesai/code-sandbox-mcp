@@ -10,118 +10,89 @@ RSpec.describe CodeSandboxMcp::Executor do
     system("which #{cmd} > /dev/null 2>&1")
   end
 
+  # Helper for asserting successful execution
+  def expect_successful_execution(result, expected_output)
+    expect(result.output).to eq(expected_output)
+    expect(result.error).to be_empty
+    expect(result.exit_code).to eq(0)
+  end
+
   describe '#execute' do
     context 'with valid language and code' do
       it 'executes JavaScript code' do
         result = executor.execute('javascript', 'console.log("Hello, World!")')
-
-        expect(result.output).to eq('Hello, World!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, World!')
       end
 
       it 'executes TypeScript code' do
         skip 'TypeScript not installed' unless command_available?('tsx') || command_available?('ts-node')
 
         result = executor.execute('typescript', 'console.log("Hello" as string)')
-
-        expect(result.output).to eq('Hello')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello')
       end
 
       it 'executes Python code' do
         result = executor.execute('python', 'print("Hello, Python!")')
-
-        expect(result.output).to eq('Hello, Python!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Python!')
       end
 
       it 'executes Ruby code' do
         result = executor.execute('ruby', 'puts "Hello, Ruby!"')
-
-        expect(result.output).to eq('Hello, Ruby!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Ruby!')
       end
 
       it 'executes Bash code' do
         result = executor.execute('bash', 'echo "Hello, Bash!"')
-
-        expect(result.output).to eq('Hello, Bash!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Bash!')
       end
 
       it 'executes Zsh code' do
         skip 'Zsh not installed' unless command_available?('zsh')
 
         result = executor.execute('zsh', 'echo "Hello, Zsh!"')
-
-        expect(result.output).to eq('Hello, Zsh!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Zsh!')
       end
 
       it 'executes Fish code' do
         skip 'Fish not installed' unless command_available?('fish')
 
         result = executor.execute('fish', 'echo "Hello, Fish!"')
-
-        expect(result.output).to eq('Hello, Fish!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Fish!')
       end
 
       it 'executes Java code' do
         skip 'Java not installed' unless command_available?('java')
 
         result = executor.execute('java', 'public class main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }')
-
-        expect(result.output).to eq('Hello, Java!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Java!')
       end
 
       it 'executes Clojure code' do
         skip 'Clojure not installed' unless command_available?('clojure')
 
         result = executor.execute('clojure', '(println "Hello, Clojure!")')
-
-        expect(result.output).to eq('Hello, Clojure!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Clojure!')
       end
 
       it 'executes Kotlin code' do
         skip 'Kotlin not installed' unless command_available?('kotlin')
 
         result = executor.execute('kotlin', 'println("Hello, Kotlin!")')
-
-        expect(result.output).to eq('Hello, Kotlin!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Kotlin!')
       end
 
       it 'executes Groovy code' do
         skip 'Groovy not installed' unless command_available?('groovy')
 
         result = executor.execute('groovy', 'println "Hello, Groovy!"')
-
-        expect(result.output).to eq('Hello, Groovy!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Groovy!')
       end
 
       it 'executes Scala code' do
         skip 'Scala not installed' unless command_available?('scala')
 
         result = executor.execute('scala', '@main def hello() = println("Hello, Scala!")')
-
-        expect(result.output).to eq('Hello, Scala!')
-        expect(result.error).to be_empty
-        expect(result.exit_code).to eq(0)
+        expect_successful_execution(result, 'Hello, Scala!')
       end
     end
 
