@@ -168,8 +168,87 @@ RSpec.describe CodeSandboxMcp::SyntaxValidator do
     end
 
     context 'with TypeScript' do
-      it 'returns nil (skips validation)' do
+      it 'returns nil for valid TypeScript (skips validation)' do
         expect(described_class.validate('typescript', 'const x: string = "Hello"')).to be_nil
+      end
+
+      it 'returns nil for invalid TypeScript syntax (skips validation)' do
+        expect(described_class.validate('typescript', 'const x: string = ')).to be_nil
+      end
+    end
+
+    context 'with Java' do
+      before do
+        skip 'javac not available' unless system('which javac > /dev/null 2>&1')
+      end
+
+      it 'returns nil for valid Java' do
+        expect(described_class.validate('java', 'class Main { public static void main(String[] args) {} }')).to be_nil
+      end
+
+      it 'raises ValidationError for invalid Java syntax' do
+        expect { described_class.validate('java', 'class Main { public static void main(String[] args) {') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /syntax error/)
+      end
+    end
+
+    context 'with Kotlin' do
+      before do
+        skip 'kotlinc-jvm not available' unless system('which kotlinc-jvm > /dev/null 2>&1')
+      end
+
+      it 'returns nil for valid Kotlin' do
+        expect(described_class.validate('kotlin', 'fun main() { println("Hello") }')).to be_nil
+      end
+
+      it 'raises ValidationError for invalid Kotlin syntax' do
+        expect { described_class.validate('kotlin', 'fun main() { println("Hello"') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /syntax error/)
+      end
+    end
+
+    context 'with Scala' do
+      before do
+        skip 'scalac not available' unless system('which scalac > /dev/null 2>&1')
+      end
+
+      it 'returns nil for valid Scala' do
+        expect(described_class.validate('scala', '@main def hello(): Unit = println("Hello")')).to be_nil
+      end
+
+      it 'raises ValidationError for invalid Scala syntax' do
+        expect { described_class.validate('scala', '@main def hello(): Unit = println("Hello"') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /syntax error/)
+      end
+    end
+
+    context 'with Groovy' do
+      before do
+        skip 'groovy not available' unless system('which groovy > /dev/null 2>&1')
+      end
+
+      it 'returns nil for valid Groovy' do
+        expect(described_class.validate('groovy', 'println "Hello"')).to be_nil
+      end
+
+      it 'raises ValidationError for invalid Groovy syntax' do
+        expect { described_class.validate('groovy', 'println "Hello') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /syntax error/)
+      end
+    end
+
+    context 'with Clojure' do
+      before do
+        skip 'clojure not available' unless system('which clojure > /dev/null 2>&1')
+      end
+
+      it 'returns nil for valid Clojure' do
+        expect(described_class.validate('clojure', '(println "Hello")')).to be_nil
+      end
+
+      it 'raises ValidationError for invalid Clojure syntax' do
+        expect { described_class.validate('clojure', '(println "Hello"') }
+          .to raise_error(CodeSandboxMcp::SyntaxValidator::ValidationError, /syntax error/)
       end
     end
   end
