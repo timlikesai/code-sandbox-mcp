@@ -38,6 +38,15 @@ module CodeSandboxMcp
         raise ValidationError, "#{language} syntax error: #{stderr.strip}"
       end
 
+      def parse_error_with_line(stderr, pattern, language)
+        if stderr =~ pattern
+          line_number = ::Regexp.last_match(1).to_i
+          message = ::Regexp.last_match(2)&.strip || 'syntax error'
+          raise ValidationError.new("#{language} syntax error on line #{line_number}: #{message}", line: line_number)
+        end
+        raise_language_syntax_error(language, stderr)
+      end
+
       def validate_python(code)
         validate_with_tempfile(code, '.py') do |file_path|
           ['python3', '-m', 'py_compile', file_path]
@@ -57,8 +66,6 @@ module CodeSandboxMcp
       end
 
       def validate_typescript(_code)
-        # TypeScript validation requires tsc which may not be available
-        # For now, we'll skip validation and let execution handle errors
         nil
       end
 
@@ -119,13 +126,7 @@ module CodeSandboxMcp
       end
 
       def parse_ruby_error(stderr)
-        if stderr =~ /-e:(\d+): (.+)/
-          line_number = ::Regexp.last_match(1).to_i
-          message = ::Regexp.last_match(2)
-          raise ValidationError.new("Ruby syntax error on line #{line_number}: #{message}", line: line_number)
-        end
-
-        raise_language_syntax_error('Ruby', stderr)
+        parse_error_with_line(stderr, /-e:(\d+): (.+)/, 'Ruby')
       end
 
       def parse_javascript_error(stderr, code)
@@ -160,25 +161,11 @@ module CodeSandboxMcp
       end
 
       def parse_bash_error(stderr)
-        if stderr =~ /line (\d+):(.*)/
-          line_number = ::Regexp.last_match(1).to_i
-          message = ::Regexp.last_match(2).strip
-          raise ValidationError.new("Bash syntax error on line #{line_number}: #{message}", line: line_number)
-        end
-
-        raise_language_syntax_error('Bash', stderr)
+        parse_error_with_line(stderr, /line (\d+):(.*)/, 'Bash')
       end
 
       def parse_shell_error(stderr, shell_name)
-        capitalized_shell = shell_name.capitalize
-        if stderr =~ /line (\d+):(.*)/
-          line_number = ::Regexp.last_match(1).to_i
-          message = ::Regexp.last_match(2).strip
-          raise ValidationError.new("#{capitalized_shell} syntax error on line #{line_number}: #{message}",
-                                    line: line_number)
-        end
-
-        raise_language_syntax_error(capitalized_shell, stderr)
+        parse_error_with_line(stderr, /line (\d+):(.*)/, shell_name.capitalize)
       end
     end
   end

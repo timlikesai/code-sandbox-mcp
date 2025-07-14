@@ -3,28 +3,17 @@
 module CodeSandboxMcp
   class SecurityMonitor
     DANGEROUS_PATTERNS = [
-      # Network operations
       /urllib\.request|requests\.|fetch\(|http\.|https\./,
       /curl\s|wget\s/,
       %r{socket\.|net/http|Net::HTTP},
-
-      # System operations
       /subprocess\.|system\(|exec\(|`[^`]*`/,
       /open3|popen/i,
-
-      # Package managers
       /pip\s+install|npm\s+install|gem\s+install/,
       /easy_install|yarn\s+add/,
-
-      # File operations that could be dangerous
       %r{/proc/|/sys/|/dev/},
       %r{\.\./|\.\.\\|\.\.[/\\]},
-
-      # Potential reverse shells
       %r{/dev/tcp|/dev/udp},
       /nc\s|netcat|telnet/,
-
-      # Environment access
       /ENV\[|process\.env|os\.environ/
     ].freeze
 
@@ -102,7 +91,6 @@ module CodeSandboxMcp
         end
         violations
       rescue StandardError
-        # netstat might not be available - skip this check
         []
       end
 
@@ -120,7 +108,6 @@ module CodeSandboxMcp
         end
         violations
       rescue StandardError
-        # ps might not be available - skip this check
         []
       end
 
