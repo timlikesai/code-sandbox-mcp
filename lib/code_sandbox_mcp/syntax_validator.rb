@@ -99,7 +99,12 @@ module CodeSandboxMcp
       end
 
       def command_available?(command)
-        system("which #{command} > /dev/null 2>&1")
+        # Use 'which' to check if command is available
+        # This is more portable across different environments
+        _stdout, _stderr, status = Open3.capture3('which', command)
+        status.success?
+      rescue StandardError
+        false
       end
 
       def validate_with_command(command)
@@ -130,6 +135,8 @@ module CodeSandboxMcp
         when '.scala' then parse_scala_error(stderr, file_path)
         when '.groovy' then parse_groovy_error(stderr, file_path)
         when '.clj' then parse_clojure_error(stderr)
+        else
+          raise_language_syntax_error("Unknown (#{extension})", stderr)
         end
       end
       # rubocop:enable Metrics/CyclomaticComplexity

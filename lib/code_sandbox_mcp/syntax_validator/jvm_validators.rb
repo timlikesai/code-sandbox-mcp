@@ -97,7 +97,7 @@ module CodeSandboxMcp
         # groovy error format varies, check for common patterns
         if stderr =~ /at line (\d+), column \d+/
           line_number = ::Regexp.last_match(1).to_i
-          message = stderr[/(.+?) at line/, 1] || 'Syntax error'
+          message = stderr[/(.+?) at line/, 1]&.strip || 'Syntax error'
           raise ValidationError.new("Groovy syntax error on line #{line_number}: #{message}", line: line_number)
         elsif stderr =~ /#{Regexp.escape(file_path)}: (\d+): (.+)/
           line_number = ::Regexp.last_match(1).to_i
