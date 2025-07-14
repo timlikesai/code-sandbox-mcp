@@ -2,6 +2,7 @@
 
 require 'open3'
 require 'tempfile'
+require_relative 'syntax_validator/jvm_validators'
 
 module CodeSandboxMcp
   class SyntaxValidator
@@ -23,10 +24,17 @@ module CodeSandboxMcp
       'typescript' => :validate_typescript,
       'bash' => :validate_bash,
       'zsh' => :validate_zsh,
-      'fish' => :validate_fish
+      'fish' => :validate_fish,
+      'java' => :validate_java,
+      'kotlin' => :validate_kotlin,
+      'scala' => :validate_scala,
+      'groovy' => :validate_groovy,
+      'clojure' => :validate_clojure
     }.freeze
 
     class << self
+      include JvmValidators
+
       def validate(language, code)
         validator = VALIDATORS[language]
         send(validator, code) if validator
@@ -66,6 +74,9 @@ module CodeSandboxMcp
       end
 
       def validate_typescript(_code)
+        # TypeScript validation is complex because we need type checking
+        # For now, skip validation since we don't have a good way to validate TS syntax
+        # without the TypeScript compiler
         nil
       end
 
@@ -87,6 +98,10 @@ module CodeSandboxMcp
         end
       end
 
+      def command_available?(command)
+        system("which #{command} > /dev/null 2>&1")
+      end
+
       def validate_with_command(command)
         _stdout, stderr, status = Open3.capture3(*command)
         return if status.success?
@@ -100,15 +115,24 @@ module CodeSandboxMcp
           file.flush
           command = yield(file.path)
           validate_with_command(command) do |stderr|
-            case extension
-            when '.py'
-              parse_python_error(stderr, code)
-            when '.js'
-              parse_javascript_error(stderr, code)
-            end
+            parse_error_for_extension(extension, stderr, code, file.path)
           end
         end
       end
+
+      # rubocop:disable Metrics/CyclomaticComplexity
+      def parse_error_for_extension(extension, stderr, code, file_path)
+        case extension
+        when '.py' then parse_python_error(stderr, code)
+        when '.js' then parse_javascript_error(stderr, code)
+        when '.java' then parse_java_error(stderr, file_path)
+        when '.kts' then parse_kotlin_error(stderr, file_path)
+        when '.scala' then parse_scala_error(stderr, file_path)
+        when '.groovy' then parse_groovy_error(stderr, file_path)
+        when '.clj' then parse_clojure_error(stderr)
+        end
+      end
+      # rubocop:enable Metrics/CyclomaticComplexity
 
       def parse_python_error(stderr, code)
         if stderr =~ /File ".*", line (\d+)/
