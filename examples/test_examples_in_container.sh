@@ -25,16 +25,16 @@ test_json_example() {
     local file="$2"
     local expected_exit_code="${3:-0}"
     local timeout="${4:-$TIMEOUT}"
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     echo -n "[$TOTAL_TESTS] Testing $name... "
-    
+
     if [ ! -f "/app/examples/$file" ]; then
         echo -e "${RED}✗ FILE NOT FOUND${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
         return 1
     fi
-    
+
     local output
     local exit_code
     if output=$(jq -c . "/app/examples/$file" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
@@ -42,10 +42,10 @@ test_json_example() {
     else
         exit_code=$?
     fi
-    
+
     log "Output: $output"
     log "Exit code: $exit_code"
-    
+
     if echo "$output" | jq -e '.result' >/dev/null 2>&1; then
         if echo "$output" | jq -e '.result.content[].text' 2>/dev/null | grep -q "Exit code: $expected_exit_code"; then
             echo -e "${GREEN}✓ PASSED${NC}"
@@ -77,28 +77,28 @@ test_doc_with_examples() {
     local name="$1"
     local file="$2"
     local timeout="${3:-60}"
-    
+
     if [ ! -f "/app/examples/$file" ]; then
         echo -e "${RED}✗ FILE NOT FOUND${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
         return 1
     fi
-    
+
     if jq -e '.steps' "/app/examples/$file" >/dev/null 2>&1; then
         test_steps_format "$name" "$file" "$timeout"
         return
     fi
-    
+
     if jq -e '.examples' "/app/examples/$file" >/dev/null 2>&1; then
         test_examples_format "$name" "$file" "$timeout"
         return
     fi
-    
+
     if jq -e '.requests' "/app/examples/$file" >/dev/null 2>&1; then
         test_requests_format "$name" "$file" "$timeout"
         return
     fi
-    
+
     test_json_example "$name" "$file"
 }
 
@@ -106,18 +106,18 @@ test_steps_format() {
     local name="$1"
     local file="$2"
     local timeout="$3"
-    
+
     local step_count=$(jq '.steps | length' "/app/examples/$file")
     local passed=0
-    
+
     for i in $(seq 0 $((step_count - 1))); do
         local step_desc=$(jq -r ".steps[$i].description" "/app/examples/$file")
         local request=$(jq -c ".steps[$i].request" "/app/examples/$file" 2>/dev/null)
-        
+
         if [ "$request" != "null" ] && [ -n "$request" ]; then
             TOTAL_TESTS=$((TOTAL_TESTS + 1))
             echo -n "[$TOTAL_TESTS] Testing $name - $step_desc... "
-            
+
             local output
             if output=$(echo "$request" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
                 if echo "$output" | jq -e '.result' >/dev/null 2>&1; then
@@ -146,19 +146,19 @@ test_examples_format() {
     local name="$1"
     local file="$2"
     local timeout="$3"
-    
+
     local example_count=$(jq '.examples | length' "/app/examples/$file")
-    
+
     for i in $(seq 0 $((example_count - 1))); do
         local title=$(jq -r ".examples[$i].title" "/app/examples/$file")
-        
+
         for request_type in validate_request execute_request; do
             local request=$(jq -c ".examples[$i].$request_type" "/app/examples/$file" 2>/dev/null)
-            
+
             if [ "$request" != "null" ] && [ -n "$request" ]; then
                 TOTAL_TESTS=$((TOTAL_TESTS + 1))
                 echo -n "[$TOTAL_TESTS] Testing $name - $title ($request_type)... "
-                
+
                 local output
                 if output=$(echo "$request" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
                     if echo "$output" | jq -e '.result' >/dev/null 2>&1; then
@@ -196,17 +196,17 @@ test_requests_format() {
     local name="$1"
     local file="$2"
     local timeout="$3"
-    
+
     local request_count=$(jq '.requests | length' "/app/examples/$file")
-    
+
     for i in $(seq 0 $((request_count - 1))); do
         local comment=$(jq -r ".requests[$i].comment // \"Request $((i+1))\"" "/app/examples/$file")
         local request=$(jq -c ".requests[$i] | del(.comment)" "/app/examples/$file" 2>/dev/null)
-        
+
         if [ "$request" != "null" ] && [ -n "$request" ]; then
             TOTAL_TESTS=$((TOTAL_TESTS + 1))
             echo -n "[$TOTAL_TESTS] Testing $name - $comment... "
-            
+
             local output
             if output=$(echo "$request" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
                 if echo "$output" | jq -e '.result' >/dev/null 2>&1; then
@@ -232,16 +232,16 @@ test_multi_step_json() {
     local name="$1"
     local file="$2"
     local timeout="${3:-120}"
-    
+
     echo -n "Testing $name... "
-    
+
     if [ ! -f "/app/examples/$file" ]; then
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         echo -e "${RED}✗ FILE NOT FOUND${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
         return 1
     fi
-    
+
     local output
     local exit_code
     if output=$(jq -c . "/app/examples/$file" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
@@ -249,22 +249,22 @@ test_multi_step_json() {
     else
         exit_code=$?
     fi
-    
+
     log "Output: $output"
     log "Exit code: $exit_code"
-    
+
     local steps_count
     steps_count=$(jq length "/app/examples/$file")
     local passed=0
     local failed=0
-    
+
     for i in $(seq 0 $((steps_count - 1))); do
         local desc=$(jq -r ".[$i].description // \"Step $((i+1))\"" "/app/examples/$file")
         local step=$(jq -c ".[$i]" "/app/examples/$file")
-        
+
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         echo -n "[$TOTAL_TESTS] Testing $name - $desc... "
-        
+
         local output
         if output=$(echo "$step" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
             if echo "$output" | jq -e '.result' >/dev/null 2>&1; then
@@ -318,7 +318,7 @@ test_multi_step_json() {
             failed=$((failed + 1))
         fi
     done
-    
+
     if [ $failed -eq 0 ]; then
         return 0
     else
@@ -331,12 +331,12 @@ test_language_runtime() {
     local code="$2"
     local expected_output="$3"
     local timeout="${4:-30}"
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     echo -n "[$TOTAL_TESTS] Testing $lang runtime... "
-    
+
     local request="{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"execute_code\",\"arguments\":{\"language\":\"$lang\",\"code\":\"$code\"}}}"
-    
+
     local output
     if output=$(echo "$request" | timeout "$timeout" /app/bin/code-sandbox-mcp 2>&1); then
         if echo "$output" | grep -q "$expected_output" && echo "$output" | grep -q "Exit code: 0"; then
@@ -345,7 +345,7 @@ test_language_runtime() {
             return 0
         fi
     fi
-    
+
     echo -e "${RED}✗ FAILED${NC}"
     FAILED_TESTS=$((FAILED_TESTS + 1))
     log "Expected: $expected_output"
@@ -402,7 +402,7 @@ test_doc_with_examples "Automatic Session Example" "automatic_session_example.js
 echo ""
 echo -e "${BLUE}=== Package Installation Tests ===${NC}"
 test_json_example "Python Package Demo" "python_package_demo.json"
-test_json_example "JavaScript Package Demo" "javascript_package_demo.json" 1 
+test_json_example "JavaScript Package Demo" "javascript_package_demo.json"
 test_json_example "Ruby Package Demo" "ruby_package_demo.json"
 test_json_example "JVM Languages Package Demo" "jvm_languages_package_demo.json"
 test_json_example "Package Installation Demo" "package_installation_demo.json"

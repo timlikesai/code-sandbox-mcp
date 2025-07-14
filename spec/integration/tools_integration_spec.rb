@@ -134,8 +134,8 @@ RSpec.describe 'Tools Integration' do
 
   describe 'Error handling consistency' do
     it 'handles executor errors gracefully in both tools' do
-      # Mock the session manager to raise an error
-      allow_any_instance_of(CodeSandboxMcp::SessionManager).to receive(:execute_in_session)
+      # Mock the executor to raise an error
+      allow_any_instance_of(CodeSandboxMcp::Executor).to receive(:execute)
         .and_raise(StandardError, 'Mock error')
 
       execution_result = CodeSandboxMcp::Tools::ExecuteCode.call(

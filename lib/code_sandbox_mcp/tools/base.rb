@@ -38,6 +38,12 @@ module CodeSandboxMcp
           true
         )
       end
+
+      def self.with_error_handling
+        yield
+      rescue StandardError => e
+        create_error_response("Error: #{e.message}")
+      end
     end
   end
 end
