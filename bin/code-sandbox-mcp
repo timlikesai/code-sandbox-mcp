@@ -3,7 +3,7 @@
 
 require 'bundler/setup'
 require 'mcp'
-require 'mcp/transports/stdio'
+require 'mcp/server/transports/stdio_transport'
 require_relative '../lib/code_sandbox_mcp'
 require_relative '../lib/code_sandbox_mcp/tools'
 
@@ -15,5 +15,5 @@ server = MCP::Server.new(
 )
 
 # Use stdio transport for communication
-transport = MCP::Transports::StdioTransport.new(server)
+transport = MCP::Server::Transports::StdioTransport.new(server)
 transport.open
