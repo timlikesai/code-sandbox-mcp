@@ -14,7 +14,7 @@ runs:
       shell: bash
       run: |
         BRANCH="${{ github.head_ref && github.head_ref || github.ref_name }}"
-        SANITIZED=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+        SANITIZED=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9.-]+/-/g; s/^-+|-+$//g; s/\\.+/./g')
         echo "sanitized=$SANITIZED" >> $GITHUB_OUTPUT
         echo "Original branch: $BRANCH"
         echo "Sanitized branch: $SANITIZED"
