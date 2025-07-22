@@ -8,8 +8,6 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "timlikesai"
     labels:
       - "dependencies"
       - "ruby"
@@ -34,8 +32,6 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "timlikesai"
     labels:
       - "dependencies"
       - "github-actions"
@@ -51,8 +47,6 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "timlikesai"
     labels:
       - "dependencies"
       - "docker"
