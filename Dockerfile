@@ -93,6 +93,7 @@ RUN apk add --no-cache build-base git \
     && bundle install --jobs 4 --retry 3 \
     && rm -rf /var/cache/apk/*
 
+COPY lib/ ./lib/
 COPY spec/ ./spec/
 COPY examples/ ./examples/
 COPY Rakefile ./
