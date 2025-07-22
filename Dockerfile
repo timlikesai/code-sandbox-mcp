@@ -20,7 +20,7 @@ RUN find kotlinc \( -name "*.txt" -o -name "*.md" -o -name "*.html" -o -name "LI
     && rm -rf scala/doc scala/api scala/lib/*-sources.jar && \
     strip --strip-unneeded kotlinc/bin/* groovy/bin/* scala/bin/* 2>/dev/null || true
 
-FROM ruby:3.4.4-alpine AS base
+FROM ruby:3.4.5-alpine AS base
 
 RUN apk add --no-cache \
     python3 \
