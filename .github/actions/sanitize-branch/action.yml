@@ -1,0 +1,20 @@
+name: 'Sanitize Branch Name'
+description: 'Sanitizes branch names for use in Docker tags by replacing slashes and converting to lowercase'
+
+outputs:
+  sanitized:
+    description: 'The sanitized branch name suitable for Docker tags'
+    value: ${{ steps.sanitize.outputs.sanitized }}
+
+runs:
+  using: composite
+  steps:
+    - name: Sanitize branch name for Docker tags
+      id: sanitize
+      shell: bash
+      run: |
+        BRANCH="${{ github.head_ref && github.head_ref || github.ref_name }}"
+        SANITIZED=$(echo "$BRANCH" | tr '/' '-' | tr '[:upper:]' '[:lower:]')
+        echo "sanitized=$SANITIZED" >> $GITHUB_OUTPUT
+        echo "Original branch: $BRANCH"
+        echo "Sanitized branch: $SANITIZED"
