@@ -140,7 +140,7 @@ jobs:
         push: true
 
   create-temp-manifests:
-    name: Create Temporary Multi-Arch Manifests
+    name: Create Multi-Arch Manifests
     runs-on: ubuntu-24.04
     needs: [build-amd64, build-arm64]
     permissions:
@@ -148,6 +148,9 @@ jobs:
       packages: write
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup Docker
       uses: ./.github/actions/setup-docker
       with:
@@ -334,6 +337,9 @@ jobs:
       packages: write
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Sanitize branch name
       id: sanitize
       uses: ./.github/actions/sanitize-branch
@@ -378,6 +384,9 @@ jobs:
     if: always()
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Sanitize branch name
       id: sanitize
       uses: ./.github/actions/sanitize-branch
