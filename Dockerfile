@@ -93,7 +93,13 @@ RUN apk add --no-cache build-base git \
     && bundle install --jobs 4 --retry 3 \
     && rm -rf /var/cache/apk/*
 
-COPY . .
+COPY lib/ ./lib/
+COPY spec/ ./spec/
+COPY examples/ ./examples/
+COPY Rakefile ./
+COPY .rspec ./
+COPY .rubocop.yml ./
+COPY *.md ./
 
 RUN mkdir -p /app/coverage /app/tmp && \
     adduser -D -s /bin/sh -h /home/sandbox -g "" sandbox && \

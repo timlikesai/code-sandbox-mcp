@@ -1,7 +1,14 @@
 backup-typescript/
 coverage/
 .git/
+.github/
 .gitignore
 .DS_Store
 vendor/bundle/
 .bundle/
+node_modules/
+*.log
+tmp/
+.env
+.env.*
+!.env.example
