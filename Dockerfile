@@ -98,6 +98,7 @@ COPY spec/ ./spec/
 COPY examples/ ./examples/
 COPY Rakefile ./
 COPY .rspec ./
+COPY .rubocop.yml ./
 COPY *.md ./
 
 RUN mkdir -p /app/coverage /app/tmp && \
