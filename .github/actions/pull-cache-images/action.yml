@@ -1,0 +1,29 @@
+name: 'Pull Cache Images'
+description: 'Pulls Docker cache images for build optimization'
+
+inputs:
+  architecture:
+    description: 'Architecture being built (amd64/arm64)'
+    required: true
+  sanitized-branch:
+    description: 'Sanitized branch name for cache tags'
+    required: true
+  registry:
+    description: 'Container registry URL'
+    required: true
+  image-name:
+    description: 'Docker image name'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Pull cache images for ${{ inputs.architecture }} builds
+      shell: bash
+      run: |
+        echo "Pulling cache images for ${{ inputs.architecture }} builds..."
+        SANITIZED_BRANCH="${{ inputs.sanitized-branch }}"
+        docker pull ${{ inputs.registry }}/${{ inputs.image-name }}:test-${SANITIZED_BRANCH} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ inputs.registry }}/${{ inputs.image-name }}:test-main || echo "Cache image not found, will build from scratch"
+        docker pull ${{ inputs.registry }}/${{ inputs.image-name }}:${SANITIZED_BRANCH} || echo "Cache image not found, will build from scratch"
+        docker pull ${{ inputs.registry }}/${{ inputs.image-name }}:main || echo "Cache image not found, will build from scratch"
