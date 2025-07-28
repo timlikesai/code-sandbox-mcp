@@ -17,7 +17,7 @@ GEM
     diff-lcs (1.6.2)
     docile (1.4.1)
     hashdiff (1.2.0)
-    json (2.13.0)
+    json (2.13.2)
     json-schema (5.2.1)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
