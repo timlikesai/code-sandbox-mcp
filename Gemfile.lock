@@ -18,7 +18,7 @@ GEM
     docile (1.4.1)
     hashdiff (1.2.0)
     json (2.13.0)
-    json-schema (5.2.1)
+    json-schema (6.0.0)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
     json_rpc_handler (0.1.1)
