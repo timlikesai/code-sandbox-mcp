@@ -13,8 +13,8 @@ group :development, :test do
   gem 'simplecov-console', '~> 0.9'
 
   # Code quality
-  gem 'rubocop', '~> 1.60'
-  gem 'rubocop-performance', '~> 1.20'
+  gem 'rubocop', '~> 1.80'
+  gem 'rubocop-performance', '~> 1.26'
 
   # Security
   gem 'bundler-audit', '~> 0.9'
