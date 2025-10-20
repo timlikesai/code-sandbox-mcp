@@ -58,7 +58,7 @@ module CodeSandboxMcp
           details = format_validation_error(error)
           annotations = { status: 'invalid', line: error.line, column: error.column }.compact
           content = [create_content_block(details, annotations)]
-          MCP::Tool::Response.new(content, true)
+          MCP::Tool::Response.new(content, error: true)
         end
 
         def format_validation_error(error)

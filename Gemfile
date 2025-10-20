@@ -3,8 +3,8 @@
 source 'https://rubygems.org'
 
 # Core dependencies
-gem 'json', '~> 2.13'
-gem 'mcp', '~> 0.2.0'
+gem 'json', '~> 2.15'
+gem 'mcp', '~> 0.4.0'
 
 group :development, :test do
   # Testing
@@ -13,8 +13,8 @@ group :development, :test do
   gem 'simplecov-console', '~> 0.9'
 
   # Code quality
-  gem 'rubocop', '~> 1.60'
-  gem 'rubocop-performance', '~> 1.20'
+  gem 'rubocop', '~> 1.81'
+  gem 'rubocop-performance', '~> 1.26'
 
   # Security
   gem 'bundler-audit', '~> 0.9'
@@ -31,5 +31,5 @@ end
 group :test do
   # Test helpers
   gem 'timecop', '~> 0.9'
-  gem 'webmock', '~> 3.19'
+  gem 'webmock', '~> 3.25'
 end
