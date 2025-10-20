@@ -35,7 +35,7 @@ module CodeSandboxMcp
       def self.create_error_response(message)
         MCP::Tool::Response.new(
           [create_content_block(message)],
-          true
+          error: true
         )
       end
 
