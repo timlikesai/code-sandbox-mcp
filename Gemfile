@@ -31,5 +31,5 @@ end
 group :test do
   # Test helpers
   gem 'timecop', '~> 0.9'
-  gem 'webmock', '~> 3.25'
+  gem 'webmock', '~> 3.26'
 end
