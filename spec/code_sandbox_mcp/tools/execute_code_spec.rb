@@ -23,6 +23,19 @@ RSpec.describe CodeSandboxMcp::Tools::ExecuteCode do
         expect(final_block[:text]).to match(/Execution time: \d+\.\d+s/)
       end
 
+      it 'includes filename in structuredContent and final block when provided' do
+        result = described_class.call(
+          language: 'python',
+          code: 'print("hi")',
+          filename: 'script.py'
+        )
+
+        h = result.to_h
+        expect(h[:structuredContent][:filename]).to eq('script.py')
+        final_block = h[:content].find { |c| c.dig(:annotations, :final) }
+        expect(final_block[:text]).to include('File: script.py')
+      end
+
       it 'executes Ruby code successfully' do
         result = described_class.call(
           language: 'ruby',

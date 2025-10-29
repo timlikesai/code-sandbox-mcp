@@ -31,6 +31,29 @@ module CodeSandboxMcp
         required: %w[language code]
       )
 
+      output_schema(
+        oneOf: [
+          {
+            type: 'object',
+            properties: {
+              status: { const: 'valid' },
+              filename: { type: %w[string null] }
+            },
+            required: %w[status]
+          },
+          {
+            type: 'object',
+            properties: {
+              status: { const: 'invalid' },
+              message: { type: 'string' },
+              line: { type: 'integer' },
+              column: { type: 'integer' }
+            },
+            required: %w[status message]
+          }
+        ]
+      )
+
       class << self
         def call(language:, code:, filename: nil, **_options)
           SyntaxValidator.validate(language, code)
@@ -51,14 +74,22 @@ module CodeSandboxMcp
             create_content_block(message, status: 'valid'),
             create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language))
           ]
-          MCP::Tool::Response.new(content)
+          create_response(content, structured: {
+            status: 'valid',
+            filename: filename
+          }.compact)
         end
 
         def error_response(error)
           details = format_validation_error(error)
           annotations = { status: 'invalid', line: error.line, column: error.column }.compact
           content = [create_content_block(details, annotations)]
-          MCP::Tool::Response.new(content, error: true)
+          create_response(content, error: true, structured: {
+            status: 'invalid',
+            message: error.message,
+            line: error.line,
+            column: error.column
+          }.compact)
         end
 
         def format_validation_error(error)

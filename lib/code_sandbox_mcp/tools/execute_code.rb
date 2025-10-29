@@ -31,11 +31,24 @@ module CodeSandboxMcp
         required: %w[language code]
       )
 
+      output_schema(
+        type: 'object',
+        properties: {
+          exit_code: { type: 'integer' },
+          execution_time_s: { type: 'number' },
+          filename: { type: %w[string null] },
+          stdout: { type: 'string' },
+          stderr: { type: 'string' }
+        }
+      )
+
       class << self
         def call(language:, code:, **options)
           with_error_handling do
             filename = options[:filename]
+            instrument(:execute_start, language: language, filename: filename)
             result = executor.execute(language, code)
+            instrument(:execute_end, language: language, filename: filename, exit_code: result.exit_code)
             build_response(code, language, result, filename)
           end
         end
@@ -43,14 +56,47 @@ module CodeSandboxMcp
         private
 
         def build_response(code, language, result, filename = nil)
-          content = [
-            create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language)),
-            output_block(result.output, 'stdout'),
-            output_block(result.error, 'stderr'),
-            create_content_block(execution_metadata(result, filename), final: true)
-          ].compact
+          content = build_content_blocks(code, language, result, filename)
+          create_response(content, structured: build_structured_payload(result, filename))
+        end
 
-          MCP::Tool::Response.new(content)
+        def build_content_blocks(code, language, result, filename)
+          [
+            code_block(code, language),
+            stdout_block(result),
+            stderr_block(result),
+            final_block(result, filename)
+          ].compact
+        end
+
+        def code_block(code, language)
+          create_content_block(code, mime_type: CodeSandboxMcp.mime_type_for(language))
+        end
+
+        def stdout_block(result)
+          output_block(result.output, 'stdout')
+        end
+
+        def stderr_block(result)
+          output_block(result.error, 'stderr')
+        end
+
+        def final_block(result, filename)
+          create_content_block(execution_metadata(result, filename), final: true)
+        end
+
+        def build_structured_payload(result, filename)
+          {
+            exit_code: result.exit_code,
+            execution_time_s: result.execution_time,
+            filename: filename,
+            stdout: present_or_nil(result.output),
+            stderr: present_or_nil(result.error)
+          }.compact
+        end
+
+        def present_or_nil(value)
+          value.to_s.empty? ? nil : value
         end
 
         def output_block(output, role)

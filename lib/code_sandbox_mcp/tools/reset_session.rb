@@ -19,6 +19,15 @@ module CodeSandboxMcp
         }
       )
 
+      output_schema(
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          language: { type: 'string' }
+        },
+        required: %w[status language]
+      )
+
       class << self
         def call(language: 'all')
           with_error_handling do
@@ -29,7 +38,10 @@ module CodeSandboxMcp
                       end
 
             content = [create_content_block(message)]
-            MCP::Tool::Response.new(content)
+            create_response(content, structured: {
+                              status: 'reset',
+                              language: language
+                            })
           end
         end
       end
