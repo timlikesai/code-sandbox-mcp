@@ -7,12 +7,27 @@ require 'mcp/server/transports/stdio_transport'
 require_relative '../lib/code_sandbox_mcp'
 require_relative '../lib/code_sandbox_mcp/tools'
 
+# Optional protocol version and server context from env
+protocol_version = ENV['MCP_PROTOCOL_VERSION']
+server_context = {}
+server_context[:deployment] = ENV['DEPLOYMENT'] if ENV['DEPLOYMENT']
+
 # Create MCP server with our tools
 server = MCP::Server.new(
   name: 'code-sandbox-mcp',
   version: CodeSandboxMcp::VERSION,
-  tools: CodeSandboxMcp::Tools::ALL
+  tools: CodeSandboxMcp::Tools::ALL,
+  protocol_version: protocol_version,
+  server_context: server_context.empty? ? nil : server_context
 )
+
+# Enable lightweight instrumentation when verbose
+if ENV['RUNNER_DEBUG'] == '1' || ENV['VERBOSE'] == 'true'
+  logger = proc do |event, payload|
+    warn "[instrument] #{event} #{payload.inspect}"
+  end
+  CodeSandboxMcp::Tools::ALL.each { |tool| tool.on_instrumentation(logger) }
+end
 
 # Use stdio transport for communication
 transport = MCP::Server::Transports::StdioTransport.new(server)
