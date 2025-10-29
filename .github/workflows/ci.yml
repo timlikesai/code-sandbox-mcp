@@ -292,7 +292,9 @@ jobs:
 
     - name: Quick smoke test
       run: |
-        RESPONSE=$(echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | \
+        MSG='{"jsonrpc":"2.0","id":1,"method":"initialize"}'
+        FRAMED="$(printf 'Content-Length: %d\r\n\r\n%s' "${#MSG}" "$MSG")"
+        RESPONSE=$(printf "%s" "$FRAMED" | \
           docker run --rm --platform ${{ matrix.platform }} -i \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} 2>/dev/null)
 
