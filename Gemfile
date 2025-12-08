@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 
 # Core dependencies
-gem 'json', '~> 2.15'
+gem 'json', '~> 2.17'
 gem 'mcp', '~> 0.4.0'
 
 group :development, :test do
