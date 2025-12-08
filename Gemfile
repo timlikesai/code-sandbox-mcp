@@ -22,7 +22,7 @@ group :development, :test do
   # Development tools
   gem 'pry', '~> 0.14'
   gem 'pry-byebug', '~> 3.10'
-  gem 'rake', '~> 13.1'
+  gem 'rake', '~> 13.3'
 
   # Documentation
   gem 'yard', '~> 0.9'
