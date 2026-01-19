@@ -13,16 +13,16 @@ group :development, :test do
   gem 'simplecov-console', '~> 0.9'
 
   # Code quality
-  gem 'rubocop', '~> 1.81'
+  gem 'rubocop', '~> 1.82'
   gem 'rubocop-performance', '~> 1.26'
 
   # Security
   gem 'bundler-audit', '~> 0.9'
 
   # Development tools
-  gem 'pry', '~> 0.14'
+  gem 'pry', '~> 0.16'
   gem 'pry-byebug', '~> 3.10'
-  gem 'rake', '~> 13.1'
+  gem 'rake', '~> 13.3'
 
   # Documentation
   gem 'yard', '~> 0.9'
